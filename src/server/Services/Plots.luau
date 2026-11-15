@@ -381,12 +381,12 @@ function Plots.AddCritter(player: Player, def: CritterDef, multiplier: number?):
 end
 
 -- Da un bicho (premio o compra) aunque no haya hueco: si no cabe, espera a que mejores el santuario.
-function Plots.GrantCritter(player: Player, def: CritterDef)
+function Plots.GrantCritter(player: Player, def: CritterDef, multiplier: number?)
 	local profile = Data.Get(player)
 	if not profile then
 		return
 	end
-	table.insert(profile.critters, def.id)
+	table.insert(profile.critters, VaultMath.encodeCritter(def.id, multiplier or 1))
 	local plot = byPlayer[player]
 	if plot then
 		render(plot)
@@ -400,6 +400,15 @@ function Plots.GetSafeCFrame(player: Player): CFrame?
 		return nil
 	end
 	return plot.origin * CFrame.new(0, 4, -S.plotSize / 2 - 4)
+end
+
+-- Punto dentro del santuario, junto al cofre, mirando hacia dentro (para volver a casa de noche).
+function Plots.GetHomeCFrame(player: Player): CFrame?
+	local plot = byPlayer[player]
+	if not plot then
+		return nil
+	end
+	return plot.origin * CFrame.new(0, 5, -S.plotSize / 2 + 15) * CFrame.Angles(0, math.pi, 0)
 end
 
 -- Redibuja el santuario (tras mejorar el Santuario o comprar VIP).

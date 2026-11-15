@@ -113,22 +113,35 @@ Gameplay.RarityGlow = {
 -- Los bichos se elevan un poco para quedar por encima del suelo de color de cada zona.
 Gameplay.CritterLift = 0.3
 
--- Partículas al atrapar según rareza (más cuanto más raro). flash = destello de luz.
+-- Efecto al atrapar según rareza (más cuanto más raro): chispas, confeti de colores, onda de
+-- choque en el suelo; flash = destello de luz; column = columna de luz hacia el cielo.
+-- Cantidades moderadas para que vaya bien en móvil.
 Gameplay.CatchBurst = {
-	Comun = { particles = 12, flash = false },
-	PocoComun = { particles = 18, flash = false },
-	Raro = { particles = 28, flash = true },
-	Epico = { particles = 40, flash = true },
-	Legendario = { particles = 60, flash = true },
+	Comun = { particles = 12, confetti = 20, flash = false, column = false },
+	PocoComun = { particles = 18, confetti = 28, flash = false, column = false },
+	Raro = { particles = 28, confetti = 40, flash = true, column = true },
+	Epico = { particles = 40, confetti = 55, flash = true, column = true },
+	Legendario = { particles = 60, confetti = 80, flash = true, column = true },
 }
 
--- Tamaño (studs) de cada rareza.
+-- Tamaño (studs) de cada rareza: cuanto más raro, más grande.
 Gameplay.CritterSizes = {
-	Comun = 2.5,
-	PocoComun = 3,
-	Raro = 3.5,
-	Epico = 4,
-	Legendario = 5,
+	Comun = 3,
+	PocoComun = 3.8,
+	Raro = 4.8,
+	Epico = 6,
+	Legendario = 7.5,
+}
+
+-- Movimiento de cada rareza: multiplica la velocidad y la distancia de paseo (Spawning).
+-- Cuanto más raro, más rápido y más lejos corretea. Al empezar la barra el bicho se para, y de
+-- noche todos están quietos, así que la captura sigue siendo justa.
+Gameplay.RarityMotion = {
+	Comun = { speed = 1, distance = 1 },
+	PocoComun = { speed = 1.3, distance = 1.2 },
+	Raro = { speed = 1.7, distance = 1.4 },
+	Epico = { speed = 2.2, distance = 1.7 },
+	Legendario = { speed = 2.8, distance = 2 },
 }
 
 return Gameplay

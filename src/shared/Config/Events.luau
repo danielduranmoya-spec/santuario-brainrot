@@ -29,7 +29,8 @@ Events.DayNight = {
 	transitionSeconds = 4, -- lo que tarda la luz en cambiar
 	dayClockTime = 14.5, -- hora que marca el cielo de día (0-24)
 	nightClockTime = 22.5, -- de noche (se usa 22,5 y no 0 para que la luz cambie sin dar la vuelta al reloj)
-	warningSeconds = 15, -- aviso antes de que anochezca
+	warningSeconds = 10, -- aviso (sonido y mensaje) antes de que anochezca
+	musicFadeSeconds = 3, -- fundido entre la música de día y la de noche
 }
 
 Events.DailyRewardStreakDays = 7

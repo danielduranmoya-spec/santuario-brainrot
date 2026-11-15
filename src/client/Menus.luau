@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -118,6 +119,181 @@ local function newPanel(gui: ScreenGui, title: string): (Frame, ScrollingFrame)
 	return panel, list
 end
 
+-- ===== Iconos de los botones laterales (dibujados con piezas de interfaz, sin imágenes externas) =====
+
+local function frame(parent: Instance, size: UDim2, position: UDim2, color: Color3, anchor: Vector2?): Frame
+	local f = Instance.new("Frame")
+	f.Size = size
+	f.Position = position
+	f.AnchorPoint = anchor or Vector2.new(0.5, 0.5)
+	f.BackgroundColor3 = color
+	f.BorderSizePixel = 0
+	f.Parent = parent
+	return f
+end
+
+local function round(f: GuiObject, radius: number)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(radius, 0)
+	corner.Parent = f
+end
+
+local function outline(f: GuiObject, color: Color3, thickness: number)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = thickness
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = f
+end
+
+local function gradient(f: GuiObject, top: Color3, bottom: Color3)
+	local g = Instance.new("UIGradient")
+	g.Color = ColorSequence.new(top, bottom)
+	g.Rotation = 90
+	g.Parent = f
+end
+
+-- Destello de 4 puntas (dos barras cruzadas).
+local function sparkle(parent: Instance, position: UDim2, size: number, color: Color3)
+	for _, rotation in { 0, 90 } do
+		local bar = frame(parent, UDim2.fromScale(size, size * 0.22), position, color)
+		bar.Rotation = rotation
+		round(bar, 1)
+	end
+end
+
+-- Mejoras: flecha gruesa hacia arriba sobre un escalón, con destellos.
+local function drawUpgradeIcon(area: Frame)
+	local white = Color3.fromRGB(255, 255, 255)
+	local dark = Color3.fromRGB(20, 90, 35)
+	local step = frame(area, UDim2.fromScale(0.62, 0.16), UDim2.fromScale(0.5, 0.86), Color3.fromRGB(255, 215, 70))
+	round(step, 0.4)
+	outline(step, dark, 2)
+	local shaft = frame(area, UDim2.fromScale(0.24, 0.38), UDim2.fromScale(0.5, 0.6), white)
+	round(shaft, 0.2)
+	outline(shaft, dark, 2)
+	local head = frame(area, UDim2.fromScale(0.42, 0.42), UDim2.fromScale(0.5, 0.36), white)
+	head.Rotation = 45
+	head.SizeConstraint = Enum.SizeConstraint.RelativeXX
+	round(head, 0.15)
+	outline(head, dark, 2)
+	-- Tapa la mitad de abajo del rombo para que quede una punta de flecha.
+	local cover = frame(area, UDim2.fromScale(0.24, 0.2), UDim2.fromScale(0.5, 0.47), white)
+	cover.ZIndex = head.ZIndex + 1
+	sparkle(area, UDim2.fromScale(0.82, 0.22), 0.22, Color3.fromRGB(255, 240, 150))
+	sparkle(area, UDim2.fromScale(0.18, 0.4), 0.14, Color3.fromRGB(255, 255, 255))
+end
+
+-- Tienda: bolsa de compras con asa y una moneda brillante delante.
+local function drawShopIcon(area: Frame)
+	local dark = Color3.fromRGB(45, 25, 120)
+	local handle = frame(area, UDim2.fromScale(0.36, 0.32), UDim2.fromScale(0.46, 0.32), Color3.new(1, 1, 1))
+	handle.BackgroundTransparency = 1
+	round(handle, 1)
+	outline(handle, Color3.fromRGB(255, 255, 255), 4)
+	local bag = frame(area, UDim2.fromScale(0.62, 0.52), UDim2.fromScale(0.46, 0.64), Color3.fromRGB(255, 120, 170))
+	round(bag, 0.18)
+	gradient(bag, Color3.fromRGB(255, 160, 200), Color3.fromRGB(230, 70, 130))
+	outline(bag, dark, 2)
+	local band = frame(bag, UDim2.fromScale(1, 0.16), UDim2.fromScale(0.5, 0.2), Color3.fromRGB(255, 255, 255))
+	band.BackgroundTransparency = 0.25
+	local coin = frame(area, UDim2.fromScale(0.36, 0.36), UDim2.fromScale(0.74, 0.76), Color3.fromRGB(255, 205, 50))
+	coin.SizeConstraint = Enum.SizeConstraint.RelativeXX
+	round(coin, 1)
+	gradient(coin, Color3.fromRGB(255, 240, 130), Color3.fromRGB(235, 160, 20))
+	outline(coin, Color3.fromRGB(150, 90, 10), 2)
+	local mark = Instance.new("TextLabel")
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Font = Enum.Font.GothamBlack
+	mark.TextScaled = true
+	mark.TextColor3 = Color3.fromRGB(160, 95, 10)
+	mark.Text = "$"
+	mark.Parent = coin
+	sparkle(area, UDim2.fromScale(0.86, 0.22), 0.2, Color3.fromRGB(255, 240, 150))
+end
+
+-- Botón lateral con icono: degradado, contorno, sombra, nombre debajo, aviso "!" y un leve
+-- balanceo del icono; crece un poco al pasar el ratón y bota al pulsarlo (Effects.BindButton).
+local function iconButton(parent: Instance, label: string, top: Color3, bottom: Color3, draw: (Frame) -> ()): (TextButton, Frame)
+	local button = Instance.new("TextButton")
+	button.Name = "Boton" .. label
+	button.Size = UDim2.fromScale(1, 0.48)
+	button.Text = ""
+	button.AutoButtonColor = false
+	button.BackgroundColor3 = top
+	button.Parent = parent
+	-- El alto manda (cabe siempre en la columna) y el ancho sale de la proporción.
+	local ratio = Instance.new("UIAspectRatioConstraint")
+	ratio.AspectRatio = 0.85
+	ratio.DominantAxis = Enum.DominantAxis.Height
+	ratio.Parent = button
+	round(button, 0.22)
+	gradient(button, top, bottom)
+	outline(button, Color3.fromRGB(20, 20, 30), 3)
+
+	-- Relieve: franja oscura abajo (como un botón que sobresale) y brillo en la mitad de arriba.
+	local base = frame(button, UDim2.fromScale(1, 0.12), UDim2.fromScale(0.5, 0.94), Color3.fromRGB(0, 0, 0))
+	base.BackgroundTransparency = 0.65
+	round(base, 0.5)
+	local shine = frame(button, UDim2.fromScale(0.86, 0.3), UDim2.fromScale(0.5, 0.2), Color3.fromRGB(255, 255, 255))
+	shine.BackgroundTransparency = 0.82
+	round(shine, 0.5)
+
+	local area = frame(button, UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.5, 0.4), Color3.new(1, 1, 1))
+	area.BackgroundTransparency = 1
+	draw(area)
+
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(0.94, 0.22)
+	text.Position = UDim2.fromScale(0.5, 0.86)
+	text.AnchorPoint = Vector2.new(0.5, 0.5)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.GothamBlack
+	text.TextScaled = true
+	text.TextColor3 = Color3.new(1, 1, 1)
+	text.Text = label
+	text.Parent = button
+	local textStroke = Instance.new("UIStroke")
+	textStroke.Thickness = 2
+	textStroke.Color = Color3.fromRGB(20, 20, 30)
+	textStroke.Parent = text
+
+	-- Aviso "!" (por ejemplo, cuando puedes pagar una mejora).
+	local badge = frame(button, UDim2.fromScale(0.32, 0.32), UDim2.fromScale(0.92, 0.06), Color3.fromRGB(235, 50, 60))
+	badge.SizeConstraint = Enum.SizeConstraint.RelativeXX
+	badge.ZIndex = 5
+	round(badge, 1)
+	outline(badge, Color3.fromRGB(255, 255, 255), 2)
+	local mark = Instance.new("TextLabel")
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Font = Enum.Font.GothamBlack
+	mark.TextScaled = true
+	mark.TextColor3 = Color3.new(1, 1, 1)
+	mark.Text = "!"
+	mark.ZIndex = 6
+	mark.Parent = badge
+	badge.Visible = false
+
+	-- Balanceo suave del icono y estados de ratón.
+	TweenService:Create(area, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 5 }):Play()
+	local scale = Instance.new("UIScale")
+	scale.Parent = button
+	button.MouseEnter:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1.07 }):Play()
+	end)
+	button.MouseLeave:Connect(function()
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end)
+	button.Activated:Connect(function()
+		Effects.Play("click")
+		scale.Scale = 0.88
+		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end)
+	return button, badge
+end
+
 type Row = { frame: Frame, title: TextLabel, detail: TextLabel, button: TextButton }
 
 local function newRow(list: ScrollingFrame, order: number): Row
@@ -147,24 +323,27 @@ function Menus.Start()
 	-- Botones laterales (a la izquierda, por encima del joystick del móvil).
 	local side = Instance.new("Frame")
 	side.Name = "BotonesMenu"
-	side.AnchorPoint = Vector2.new(0, 0.5)
-	side.Position = UDim2.fromScale(0.015, 0.42)
-	side.Size = UDim2.fromScale(0.16, 0.24)
+	-- Arriba a la izquierda, bajo la barra de Roblox: deja libre la esquina de abajo para la cartera.
+	side.AnchorPoint = Vector2.new(0, 0)
+	side.Position = UDim2.new(0, 12, 0, 54)
+	side.Size = UDim2.new(0.12, 0, 0.48, 0)
 	side.BackgroundTransparency = 1
 	side.Parent = gui
 	local sideLimit = Instance.new("UISizeConstraint")
-	sideLimit.MaxSize = Vector2.new(220, 170)
+	sideLimit.MaxSize = Vector2.new(120, 270)
 	sideLimit.Parent = side
 	local sideLayout = Instance.new("UIListLayout")
-	sideLayout.Padding = UDim.new(0.06, 0)
+	sideLayout.Padding = UDim.new(0.04, 0)
+	sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	sideLayout.Parent = side
 
-	local upgradesButton = newButton(side, UDim2.fromScale(1, 0.46), UDim2.new(), COLOR_GOOD, "⬆ MEJORAS")
+	local upgradesButton, upgradesBadge = iconButton(side, "MEJORAS", COLOR_GOOD, Color3.fromRGB(30, 130, 50), drawUpgradeIcon)
 	upgradesButton.LayoutOrder = 1
 	upgradesButton.Visible = false
-	local shopButton = newButton(side, UDim2.fromScale(1, 0.46), UDim2.new(), COLOR_ROBUX, "🛒 TIENDA")
+	local shopButton, shopBadge = iconButton(side, "TIENDA", Color3.fromRGB(120, 90, 255), Color3.fromRGB(60, 40, 170), drawShopIcon)
 	shopButton.LayoutOrder = 2
 	shopButton.Visible = false
+	shopBadge.Visible = false
 
 	local upgradesPanel, upgradesList = newPanel(gui, "Mejoras")
 	local shopPanel, shopList = newPanel(gui, "Tienda")
@@ -196,6 +375,15 @@ function Menus.Start()
 
 	local function refreshUpgrades()
 		local coins = getCoins()
+		local affordable = false
+		for name in upgradeRows do
+			local level = (player:GetAttribute("Upgrade_" .. name) :: number?) or 0
+			if level < Progression.Upgrades[name].maxLevel and coins >= UpgradeMath.cost(name, level + 1) then
+				affordable = true
+			end
+		end
+		-- "!" en el botón cuando puedes pagar alguna mejora.
+		upgradesBadge.Visible = affordable
 		for name, row in upgradeRows do
 			local def = Progression.Upgrades[name]
 			local level = (player:GetAttribute("Upgrade_" .. name) :: number?) or 0

@@ -268,7 +268,8 @@ local function spawnWild(def: CritterDef, vault: number, groundPosition: Vector3
 	prompt.ActionText = "Atrapar"
 	prompt.ObjectText = def.name .. (if mult > 1 then " x" .. mult else "")
 	prompt.HoldDuration = 0
-	prompt.MaxActivationDistance = Catching.range
+	-- La distancia se mide desde el centro: a los bichos grandes se les suma su radio.
+	prompt.MaxActivationDistance = Catching.range + part.Size.Y / 2
 	prompt.RequiresLineOfSight = false
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.Parent = part
@@ -310,7 +311,7 @@ local function flee(w: Wild, player: Player)
 	if not w.isTutorial then
 		target = clampToVault(w.vault, target)
 	end
-	moveTo(w, target, Spawning.wanderSpeed * Catching.fleeSpeedMultiplier)
+	moveTo(w, target, Spawning.wanderSpeed * Catching.fleeSpeedMultiplier * Gameplay.RarityMotion[w.def.rarity].speed)
 end
 
 local function startCarrying(player: Player, w: Wild): boolean
@@ -405,7 +406,7 @@ startMinigame = function(player: Player, w: Wild)
 		return
 	end
 	local root = getRoot(player)
-	if not root or (root.Position - w.part.Position).Magnitude > Catching.range + Catching.rangeTolerance then
+	if not root or (root.Position - w.part.Position).Magnitude > Catching.range + w.part.Size.Y / 2 + Catching.rangeTolerance then
 		return
 	end
 
@@ -566,8 +567,10 @@ local function wanderLoop()
 						removeWild(w)
 						w.part:Destroy()
 					elseif rng:NextNumber() < Spawning.wanderChance then
-						local offset = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)) * Spawning.wanderDistance
-						moveTo(w, clampToVault(w.vault, w.part.Position + offset), Spawning.wanderSpeed)
+						-- Cuanto más raro, más rápido y más lejos corretea (Config/Gameplay.RarityMotion).
+						local motion = Gameplay.RarityMotion[w.def.rarity]
+						local offset = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)) * Spawning.wanderDistance * motion.distance
+						moveTo(w, clampToVault(w.vault, w.part.Position + offset), Spawning.wanderSpeed * motion.speed)
 					end
 				end
 			end
@@ -576,10 +579,39 @@ local function wanderLoop()
 end
 
 -- Noche: los bichos se duermen (se paran, no se pueden atrapar). Día: despiertan.
+-- Al anochecer, quien esté en una bóveda vuelve a su santuario. Si llevaba un bicho, se coloca en
+-- un pedestal libre o, si no cabe, queda esperando hueco: no se pierde.
+local function sendHomeAtNight(player: Player)
+	local root = getRoot(player)
+	local target = Plots.GetHomeCFrame(player)
+	if not root or not target or not VaultMath.vaultAt(root.Position) then
+		return
+	end
+	local carried = carrying[player]
+	local saved = ""
+	if carried then
+		carrying[player] = nil
+		carried.part:Destroy()
+		local ok = Plots.AddCritter(player, carried.def, carried.multiplier)
+		if not ok then
+			Plots.GrantCritter(player, carried.def, carried.multiplier)
+		end
+		saved = " Tu " .. carried.def.name .. " ya está en el santuario."
+	end
+	root.AssemblyLinearVelocity = Vector3.zero
+	if player.Character then
+		player.Character:PivotTo(target)
+	end
+	notify(player, "🌙 Ha anochecido: has vuelto a tu santuario." .. saved)
+end
+
 local function onNightChanged(night: boolean)
 	if night then
 		for player in minigames do
 			endMinigame(player, false, NIGHT_MESSAGE)
+		end
+		for _, player in Players:GetPlayers() do
+			task.spawn(sendHomeAtNight, player)
 		end
 	end
 	for _, w in wild do

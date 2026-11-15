@@ -106,16 +106,93 @@ local function newButton(name: string, size: UDim2, position: UDim2, color: Colo
 	return button
 end
 
-local coinsLabel = newLabel("Monedas", UDim2.fromScale(0.3, 0.07), UDim2.fromScale(0.5, 0.06), gui)
+-- En móvil, abajo a la izquierda está el joystick y abajo a la derecha el botón de saltar:
+-- las esquinas de abajo se suben para no taparlos.
+local IS_TOUCH = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local CORNER_LIFT = if IS_TOUCH then -200 else -12
+
+-- ===== Cartera (abajo a la izquierda): monedas y monedas por segundo =====
+local wallet = Instance.new("Frame")
+wallet.Name = "Cartera"
+wallet.AnchorPoint = Vector2.new(0, 1)
+wallet.Position = UDim2.new(0, 12, 1, CORNER_LIFT)
+wallet.Size = UDim2.fromScale(0.26, 0.12)
+wallet.BackgroundColor3 = COLOR_DARK
+wallet.BackgroundTransparency = 0.25
+wallet.Parent = gui
+addCorner(wallet)
+local walletLimit = Instance.new("UISizeConstraint")
+walletLimit.MinSize = Vector2.new(170, 58)
+walletLimit.MaxSize = Vector2.new(300, 92)
+walletLimit.Parent = wallet
+local walletStroke = Instance.new("UIStroke")
+walletStroke.Color = COLOR_GOLD
+walletStroke.Thickness = 2
+walletStroke.Transparency = 0.3
+walletStroke.Parent = wallet
+local walletScale = Instance.new("UIScale")
+walletScale.Parent = wallet
+
+-- Moneda dibujada: círculo dorado con degradado, borde y símbolo.
+local coinIcon = Instance.new("Frame")
+coinIcon.Name = "IconoMoneda"
+coinIcon.AnchorPoint = Vector2.new(0, 0.5)
+coinIcon.Position = UDim2.new(0.04, 0, 0.5, 0)
+coinIcon.Size = UDim2.fromScale(0.72, 0.72)
+coinIcon.SizeConstraint = Enum.SizeConstraint.RelativeYY
+coinIcon.BackgroundColor3 = COLOR_GOLD
+coinIcon.Parent = wallet
+local coinCorner = Instance.new("UICorner")
+coinCorner.CornerRadius = UDim.new(1, 0)
+coinCorner.Parent = coinIcon
+local coinGradient = Instance.new("UIGradient")
+coinGradient.Color = ColorSequence.new(Color3.fromRGB(255, 235, 120), Color3.fromRGB(230, 150, 20))
+coinGradient.Rotation = 90
+coinGradient.Parent = coinIcon
+local coinStroke = Instance.new("UIStroke")
+coinStroke.Color = Color3.fromRGB(150, 90, 10)
+coinStroke.Thickness = 2
+coinStroke.Parent = coinIcon
+local coinSymbol = Instance.new("TextLabel")
+coinSymbol.Size = UDim2.fromScale(1, 1)
+coinSymbol.BackgroundTransparency = 1
+coinSymbol.Font = Enum.Font.GothamBlack
+coinSymbol.TextScaled = true
+coinSymbol.TextColor3 = Color3.fromRGB(160, 95, 10)
+coinSymbol.Text = "$"
+coinSymbol.Parent = coinIcon
+
+local coinsLabel = Instance.new("TextLabel")
+coinsLabel.Name = "Monedas"
+coinsLabel.BackgroundTransparency = 1
+coinsLabel.Position = UDim2.fromScale(0.34, 0.08)
+coinsLabel.Size = UDim2.fromScale(0.62, 0.52)
+coinsLabel.Font = Enum.Font.GothamBlack
+coinsLabel.TextScaled = true
+coinsLabel.TextXAlignment = Enum.TextXAlignment.Left
 coinsLabel.TextColor3 = COLOR_GOLD
-coinsLabel.Text = "💰 0"
+coinsLabel.TextStrokeTransparency = 0.5
+coinsLabel.Text = "0"
+coinsLabel.Parent = wallet
+
+local incomeLabel = Instance.new("TextLabel")
+incomeLabel.Name = "Velocidad"
+incomeLabel.BackgroundTransparency = 1
+incomeLabel.Position = UDim2.fromScale(0.34, 0.6)
+incomeLabel.Size = UDim2.fromScale(0.62, 0.32)
+incomeLabel.Font = Enum.Font.GothamBold
+incomeLabel.TextScaled = true
+incomeLabel.TextXAlignment = Enum.TextXAlignment.Left
+incomeLabel.TextColor3 = Color3.fromRGB(140, 230, 140)
+incomeLabel.Text = "⚡ +0/s"
+incomeLabel.Parent = wallet
 
 -- Siguiente bóveda: nombre, precio y barra de progreso con tus monedas.
 local nextFrame = Instance.new("Frame")
 nextFrame.Name = "SiguienteBoveda"
 nextFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 nextFrame.Size = UDim2.fromScale(0.36, 0.045)
-nextFrame.Position = UDim2.fromScale(0.5, 0.117)
+nextFrame.Position = UDim2.fromScale(0.5, 0.06)
 nextFrame.BackgroundColor3 = COLOR_DARK
 nextFrame.BackgroundTransparency = 0.3
 nextFrame.Parent = gui
@@ -141,14 +218,24 @@ nextPadding.PaddingTop = UDim.new(0.15, 0)
 nextPadding.PaddingBottom = UDim.new(0.15, 0)
 nextPadding.Parent = nextText
 
--- Día y noche: cuenta atrás arriba a la derecha.
-local dayLabel = newLabel("DiaNoche", UDim2.fromScale(0.2, 0.055), UDim2.fromScale(0.86, 0.06), gui)
+-- Día y noche: cuenta atrás abajo a la derecha.
+local dayLabel = newLabel("DiaNoche", UDim2.fromScale(0.18, 0.065), UDim2.new(1, -12, 1, CORNER_LIFT), gui)
+dayLabel.AnchorPoint = Vector2.new(1, 1)
 dayLabel.Text = "☀ 5:00"
+local dayLimit = Instance.new("UISizeConstraint")
+dayLimit.MinSize = Vector2.new(130, 40)
+dayLimit.MaxSize = Vector2.new(230, 60)
+dayLimit.Parent = dayLabel
+local dayStroke = Instance.new("UIStroke")
+dayStroke.Thickness = 2
+dayStroke.Transparency = 0.3
+dayStroke.Color = Color3.fromRGB(255, 230, 120)
+dayStroke.Parent = dayLabel
 
-local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.175), gui)
+local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.12), gui)
 hintLabel.Visible = false
 
-local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.27), gui)
+local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.22), gui)
 toastLabel.TextWrapped = true
 toastLabel.Visible = false
 
@@ -193,6 +280,7 @@ local minigame: MinigameData? = nil
 local waitingResult = false
 local hasCaught = false
 local hasCollected = false
+local nightWarned = false
 local toastId = 0
 
 local function showToast(text: string, color: Color3?)
@@ -319,9 +407,9 @@ end
 
 local currentCoins = 0
 
-local function coinsText(value: number): string
+local function updateIncome()
 	local income = (player:GetAttribute("IncomePerSecond") :: number?) or 0
-	return "💰 " .. Format.number(value) .. (if income > 0 then "  (+" .. Format.number(income) .. "/s)" else "")
+	incomeLabel.Text = "⚡ +" .. Format.number(income) .. " /s"
 end
 
 local function bindCoins()
@@ -329,18 +417,18 @@ local function bindCoins()
 	local coins = leaderstats:WaitForChild("Monedas") :: IntValue
 	local last = coins.Value
 	currentCoins = coins.Value
-	coinsLabel.Text = coinsText(coins.Value)
-	player:GetAttributeChangedSignal("IncomePerSecond"):Connect(function()
-		coinsLabel.Text = coinsText(coins.Value)
-	end)
+	coinsLabel.Text = Format.number(coins.Value)
+	updateIncome()
+	player:GetAttributeChangedSignal("IncomePerSecond"):Connect(updateIncome)
 	coins.Changed:Connect(function()
 		local value = coins.Value
 		currentCoins = value
-		coinsLabel.Text = coinsText(value)
+		coinsLabel.Text = Format.number(value)
 		if value > last then
 			hasCollected = true
-			coinsLabel.Size = UDim2.fromScale(0.33, 0.08)
-			TweenService:Create(coinsLabel, TweenInfo.new(0.25), { Size = UDim2.fromScale(0.3, 0.07) }):Play()
+			-- Bote de la cartera al ganar monedas.
+			walletScale.Scale = 1.08
+			TweenService:Create(walletScale, TweenInfo.new(0.25, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 		end
 		last = value
 	end)
@@ -461,6 +549,17 @@ RunService.RenderStepped:Connect(function()
 	local warning = (ReplicatedStorage:GetAttribute("NightWarningSeconds") :: number?) or 0
 	dayLabel.Text = (if night then "🌙 Noche " else "☀ Día ") .. clock
 	dayLabel.TextColor3 = if night then Color3.fromRGB(170, 190, 255) elseif left <= warning then COLOR_BAD else Color3.fromRGB(255, 230, 120)
+
+	-- Aviso de que anochece: sonido, mensaje y el reloj parpadea en rojo.
+	local warningNow = not night and left > 0 and left <= warning
+	if warningNow and not nightWarned then
+		nightWarned = true
+		Effects.Play("alerta_noche")
+		showToast("⚠ ¡Anochece en " .. left .. " segundos! Los bichos se dormirán y volverás a tu santuario.", COLOR_BAD)
+	elseif not warningNow then
+		nightWarned = false
+	end
+	dayLabel.BackgroundColor3 = if warningNow and (os.clock() % 0.6) < 0.3 then COLOR_BAD else COLOR_DARK
 
 	local hint: string? = nil
 	if night then
