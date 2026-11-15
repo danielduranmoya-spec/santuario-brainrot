@@ -1,27 +1,74 @@
 --!strict
--- Ajustes del bucle principal: aparición de bichos, minijuego de captura y santuarios.
--- Única fuente de verdad de estos números (ver design/GDD.md, "Bucle de 30 segundos").
+-- Ajustes del bucle principal: zonas del mapa, aparición de bichos, minijuego de captura,
+-- santuarios y guardado. Única fuente de verdad de estos números (ver design/GDD.md).
 
 local Gameplay = {}
 
 -- Altura del suelo (la parte de arriba del Baseplate está en Y = 0).
 Gameplay.GroundY = 0
+Gameplay.BaseWalkSpeed = 16 -- la mejora Botas suma a esto
+Gameplay.MaxCatchWindow = 0.9 -- tope de la zona verde con todas las mejoras
+
+-- Zonas del mapa (sus costes están en Progression.Zones). La Playa Rara es el centro.
+Gameplay.Zones = {
+	PlayaRara = {
+		center = Vector3.new(0, 0, 0),
+		minRadius = 18, -- deja libre el punto de aparición del jugador
+		radius = 50,
+		maxCritters = 12,
+		color = Color3.fromRGB(235, 215, 150),
+	},
+	BosqueRuidoso = {
+		center = Vector3.new(0, 0, -200),
+		minRadius = 6,
+		radius = 45,
+		maxCritters = 10,
+		color = Color3.fromRGB(60, 130, 60),
+	},
+	VolcanTimido = {
+		center = Vector3.new(200, 0, 0),
+		minRadius = 6,
+		radius = 45,
+		maxCritters = 8,
+		color = Color3.fromRGB(150, 60, 40),
+	},
+	NubePegajosa = {
+		center = Vector3.new(0, 0, 200),
+		minRadius = 6,
+		radius = 45,
+		maxCritters = 6,
+		color = Color3.fromRGB(215, 220, 255),
+	},
+}
+
+-- Barrera de las zonas bloqueadas (cada cliente la vuelve sólida solo para sí mismo).
+Gameplay.ZoneBarrier = {
+	height = 24,
+	transparency = 0.6,
+	gateDistance = 4, -- studs por fuera de la barrera donde está la puerta
+	promptDistance = 12,
+	promptHoldSeconds = 0.5,
+}
 
 Gameplay.Spawning = {
-	zone = "PlayaRara", -- única zona construida en esta fase
-	center = Vector3.new(0, 0, 0),
-	minRadius = 18, -- studs desde el centro
-	maxRadius = 50,
-	intervalSeconds = 3, -- cada cuánto intenta aparecer un bicho
-	maxCritters = 12, -- bichos salvajes a la vez
+	intervalSeconds = 3, -- cada cuánto intenta aparecer un bicho en cada zona
 	despawnSeconds = 120, -- un bicho sin atrapar desaparece tras este tiempo
 	wanderIntervalSeconds = 3,
 	wanderChance = 0.6, -- probabilidad de que un bicho se mueva en cada paso
 	wanderDistance = 8,
 	wanderSpeed = 5, -- studs/s
+	tutorialZone = "PlayaRara",
 	tutorialDistance = 12, -- el primer bicho aparece justo delante del jugador
 	tutorialDelaySeconds = 1,
 	labelMaxDistance = 90,
+}
+
+-- Suerte x2 (producto de pago): mientras dure, aparece cerca del jugador un bicho reservado
+-- para él, con las rarezas no comunes multiplicadas.
+Gameplay.Luck = {
+	personalSpawnSeconds = 20,
+	rarityMultiplier = 2,
+	spawnDistance = 10,
 }
 
 Gameplay.Catching = {
@@ -31,7 +78,6 @@ Gameplay.Catching = {
 	barCycleSeconds = 1.6, -- ida y vuelta del marcador de la barra
 	timeoutSeconds = 6, -- si no pulsas en este tiempo, el bicho huye
 	latencyToleranceSeconds = 0.15, -- el servidor mira también un poco antes de recibir el toque
-	sampleStepSeconds = 0.01,
 	fleeDistance = 16,
 	fleeSpeedMultiplier = 3,
 	carryHeight = 3, -- studs por encima de la cabeza
@@ -47,10 +93,28 @@ Gameplay.Sanctuary = {
 	slotColumns = 5,
 	slotSpacing = 5,
 	slotStartZ = -3,
-	collectRadius = 4, -- distancia al cofre para cobrar (el Imán la ampliará)
+	collectRadius = 4, -- distancia al cofre para cobrar (el Imán la amplía)
 	collectCheckSeconds = 0.2,
 	coinTickSeconds = 1,
 	labelMaxDistance = 120,
+}
+
+Gameplay.Data = {
+	storeName = "Jugadores_v1", -- cambiarlo borra el progreso de todos (empieza otro almacén)
+	maxRetries = 5,
+	retryDelaySeconds = 2, -- se multiplica por el número de intento
+	lockTimeoutSeconds = 300, -- si otro servidor no renueva su reserva en este tiempo, se ignora
+	lockWaitSeconds = 5,
+	lockRetries = 3,
+	receiptHistory = 50, -- compras recordadas para no darlas dos veces
+	studioWarningDelaySeconds = 4,
+	closeTimeoutSeconds = 25, -- Roblox da unos 30 s para guardar al cerrar el servidor
+}
+
+Gameplay.Menus = {
+	upgradesAfterCritters = 1, -- el botón MEJORAS sale al tener este número de bichos en el santuario
+	shopAfterSeconds = 60, -- GDD: nada de tiendas antes del primer minuto
+	actionCooldownSeconds = 0.3,
 }
 
 -- Diámetro (studs) de la bola provisional de cada rareza.

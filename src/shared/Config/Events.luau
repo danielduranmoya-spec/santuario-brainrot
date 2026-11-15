@@ -24,4 +24,16 @@ Events.Bait = {
 
 Events.DailyRewardStreakDays = 7
 
+-- Premio de cada día de la racha (uno por día, tantos como DailyRewardStreakDays).
+-- Si un día pasa sin entrar, la racha vuelve al día 1. Tras el día 7 vuelve a empezar.
+Events.DailyRewards = {
+	{ coins = 100 },
+	{ coins = 250 },
+	{ coins = 500 },
+	{ coins = 900 },
+	{ coins = 1_500 },
+	{ coins = 2_500 },
+	{ coins = 0, critterRarity = "Raro" }, -- GDD: el día 7 da un bicho raro
+}
+
 return Events

@@ -1,15 +1,26 @@
 --!strict
--- Punto de entrada del servidor: arranca los servicios del bucle principal (semanas 7-8, ver design/GDD.md).
--- Siguientes pasos: Services/Data (DataStore), mejoras, tienda y Services/Purchases (ProcessReceipt).
+-- Punto de entrada del servidor: arranca los servicios (ver design/GDD.md).
+-- Data.Start va el último: al cargar a cada jugador avisa a los demás servicios (Data.OnLoaded),
+-- en el orden en que se registraron aquí.
 
 local Services = script.Parent:WaitForChild("Services")
 
+local Data = require(Services:WaitForChild("Data"))
 local Economy = require(Services:WaitForChild("Economy"))
 local Plots = require(Services:WaitForChild("Plots"))
+local Zones = require(Services:WaitForChild("Zones"))
+local Upgrades = require(Services:WaitForChild("Upgrades"))
+local Purchases = require(Services:WaitForChild("Purchases"))
+local DailyReward = require(Services:WaitForChild("DailyReward"))
 local CritterSpawner = require(Services:WaitForChild("CritterSpawner"))
 
 Economy.Start()
 Plots.Start()
+Zones.Start()
+Upgrades.Start()
+Purchases.Start()
+DailyReward.Start()
 CritterSpawner.Start()
+Data.Start()
 
 print("Santuario de Bichos Raros: servidor listo")

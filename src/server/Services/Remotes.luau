@@ -1,5 +1,6 @@
 --!strict
 -- Crea los RemoteEvents en ReplicatedStorage.Remotes. El cliente los busca con WaitForChild.
+-- Todo lo que llega del cliente se valida en el servidor (tipo, rango y cooldown).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,6 +22,8 @@ local Remotes = {
 	-- cliente -> servidor
 	AttemptCatch = newEvent("AttemptCatch"), -- (momento en tiempo de servidor: number)
 	ReleaseCarried = newEvent("ReleaseCarried"), -- ()
+	BuyUpgrade = newEvent("BuyUpgrade"), -- (nombre de la mejora: string)
+	PromptPurchase = newEvent("PromptPurchase"), -- (tipo: "pass" | "product", nombre: string)
 }
 
 folder.Parent = ReplicatedStorage

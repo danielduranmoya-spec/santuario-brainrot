@@ -1,9 +1,10 @@
 --!strict
--- Bichos salvajes: aparición por peso de rareza, paseo lento, captura y transporte al santuario.
+-- Bichos salvajes: aparición por zona y peso de rareza, paseo lento, captura y transporte al santuario.
 --
 -- Captura (el servidor manda):
---   1. El jugador activa el ProximityPrompt "Atrapar" del bicho. El servidor comprueba distancia y cooldown,
---      bloquea el bicho y elige la zona verde (catchWindow de su rareza).
+--   1. El jugador activa el ProximityPrompt "Atrapar" del bicho. El servidor comprueba distancia,
+--      cooldown y que tenga la zona desbloqueada, bloquea el bicho y elige la zona verde
+--      (catchWindow de su rareza + mejora Red, o el máximo con el pase Red Dorada).
 --   2. El cliente solo dibuja la barra y, al pulsar, envía "intento" + el momento en que pulsó.
 --   3. El servidor recorta ese momento a una ventana corta antes de recibirlo y calcula él mismo dónde
 --      estaba la aguja con el tiempo de servidor (CatchBar). Si estaba en verde, lo atrapas.
@@ -18,10 +19,14 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
+local Progression = require(Config:WaitForChild("Progression"))
 local CatchBar = require(Shared:WaitForChild("CatchBar"))
+local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
 
+local Data = require(script.Parent:WaitForChild("Data"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
+local Zones = require(script.Parent:WaitForChild("Zones"))
 local CritterVisual = require(script.Parent:WaitForChild("CritterVisual"))
 
 type CritterDef = CrittersConfig.Critter
@@ -29,11 +34,13 @@ type CritterDef = CrittersConfig.Critter
 type Wild = {
 	uid: string,
 	def: CritterDef,
+	zone: string,
 	part: BasePart,
 	prompt: ProximityPrompt,
 	spawnedAt: number,
 	lockedBy: Player?,
-	tutorialFor: Player?,
+	reservedFor: Player?, -- solo este jugador puede atraparlo (tutorial o Suerte x2)
+	isTutorial: boolean,
 	tween: Tween?,
 }
 
@@ -52,6 +59,7 @@ type Carried = {
 
 local Spawning = Gameplay.Spawning
 local Catching = Gameplay.Catching
+local Luck = Gameplay.Luck
 
 local CritterSpawner = {}
 
@@ -66,6 +74,7 @@ local minigames: { [Player]: Minigame } = {}
 local carrying: { [Player]: Carried } = {}
 local lastAction: { [Player]: number } = {}
 local tutorialGiven: { [Player]: boolean } = {}
+local luckCritter: { [Player]: Wild } = {}
 
 local function getRoot(player: Player): BasePart?
 	local character = player.Character
@@ -90,16 +99,19 @@ local function passCooldown(player: Player): boolean
 	return true
 end
 
-local function countWild(): number
+local function countWild(zone: string): number
 	local count = 0
-	for _ in wild do
-		count += 1
+	for _, w in wild do
+		if w.zone == zone and w.reservedFor == nil then
+			count += 1
+		end
 	end
 	return count
 end
 
 -- Elige un bicho de la zona: primero la rareza (según su peso) y luego un bicho de esa rareza.
-local function pickCritter(zone: string): CritterDef?
+-- Con `luckMultiplier` > 1, las rarezas no comunes pesan más.
+local function pickCritter(zone: string, luckMultiplier: number): CritterDef?
 	local byRarity: { [string]: { CritterDef } } = {}
 	for _, def in CrittersConfig.List do
 		if def.zone == zone then
@@ -112,9 +124,14 @@ local function pickCritter(zone: string): CritterDef?
 		end
 	end
 
+	local function weightOf(rarity: string): number
+		local weight = CrittersConfig.Rarities[rarity].weight
+		return if rarity == "Comun" then weight else weight * luckMultiplier
+	end
+
 	local total = 0
 	for rarity in byRarity do
-		total += CrittersConfig.Rarities[rarity].weight
+		total += weightOf(rarity)
 	end
 	if total <= 0 then
 		return nil
@@ -124,7 +141,7 @@ local function pickCritter(zone: string): CritterDef?
 	local chosen: { CritterDef }? = nil
 	for rarity, list in byRarity do
 		chosen = list
-		roll -= CrittersConfig.Rarities[rarity].weight
+		roll -= weightOf(rarity)
 		if roll <= 0 then
 			break
 		end
@@ -144,22 +161,22 @@ local function firstCommonOfZone(zone: string): CritterDef?
 	return nil
 end
 
-local function randomSpawnPoint(): Vector3
-	local center = Spawning.center
+local function randomSpawnPoint(zone: string): Vector3
+	local area = Gameplay.Zones[zone]
 	local angle = rng:NextNumber(0, math.pi * 2)
 	-- raíz cuadrada para repartir los bichos por igual en el anillo
-	local radius = math.sqrt(rng:NextNumber(Spawning.minRadius ^ 2, Spawning.maxRadius ^ 2))
-	return Vector3.new(center.X + math.cos(angle) * radius, Gameplay.GroundY, center.Z + math.sin(angle) * radius)
+	local radius = math.sqrt(rng:NextNumber(area.minRadius ^ 2, area.radius ^ 2))
+	return Vector3.new(area.center.X + math.cos(angle) * radius, Gameplay.GroundY, area.center.Z + math.sin(angle) * radius)
 end
 
--- Mantiene un punto dentro del círculo de la playa.
-local function clampToBeach(point: Vector3): Vector3
-	local center = Spawning.center
-	local flat = Vector3.new(point.X - center.X, 0, point.Z - center.Z)
-	if flat.Magnitude > Spawning.maxRadius then
-		flat = flat.Unit * Spawning.maxRadius
+-- Mantiene un punto dentro del círculo de su zona.
+local function clampToZone(zone: string, point: Vector3): Vector3
+	local area = Gameplay.Zones[zone]
+	local flat = Vector3.new(point.X - area.center.X, 0, point.Z - area.center.Z)
+	if flat.Magnitude > area.radius then
+		flat = flat.Unit * area.radius
 	end
-	return Vector3.new(center.X + flat.X, point.Y, center.Z + flat.Z)
+	return Vector3.new(area.center.X + flat.X, point.Y, area.center.Z + flat.Z)
 end
 
 local function setLocked(w: Wild, player: Player?)
@@ -196,17 +213,26 @@ local function removeWild(w: Wild)
 		w.tween = nil
 	end
 	wild[w.uid] = nil
+	for player, lucky in luckCritter do
+		if lucky == w then
+			luckCritter[player] = nil
+		end
+	end
 end
 
 local startMinigame: (player: Player, w: Wild) -> ()
 
-local function spawnWild(def: CritterDef, groundPosition: Vector3, tutorialFor: Player?): Wild
+local function spawnWild(def: CritterDef, zone: string, groundPosition: Vector3, reservedFor: Player?, isTutorial: boolean): Wild
 	local part = CritterVisual.create(def)
 	local uid = HttpService:GenerateGUID(false)
 	part.CFrame = CFrame.new(groundPosition + Vector3.new(0, part.Size.Y / 2, 0))
 	part:SetAttribute("CritterUid", uid)
-	if tutorialFor then
-		part:SetAttribute("TutorialFor", tutorialFor.UserId)
+	part:SetAttribute("Zone", zone)
+	if reservedFor then
+		part:SetAttribute("ReservedFor", reservedFor.UserId)
+		if isTutorial then
+			part:SetAttribute("TutorialFor", reservedFor.UserId)
+		end
 	end
 
 	local prompt = Instance.new("ProximityPrompt")
@@ -221,11 +247,13 @@ local function spawnWild(def: CritterDef, groundPosition: Vector3, tutorialFor: 
 	local w: Wild = {
 		uid = uid,
 		def = def,
+		zone = zone,
 		part = part,
 		prompt = prompt,
 		spawnedAt = os.clock(),
 		lockedBy = nil,
-		tutorialFor = tutorialFor,
+		reservedFor = reservedFor,
+		isTutorial = isTutorial,
 		tween = nil,
 	}
 	prompt.Triggered:Connect(function(player: Player)
@@ -247,7 +275,7 @@ local function flee(w: Wild, player: Player)
 	if away.Magnitude < 0.01 then
 		away = Vector3.new(1, 0, 0)
 	end
-	local target = clampToBeach(w.part.Position + away.Unit * Catching.fleeDistance)
+	local target = clampToZone(w.zone, w.part.Position + away.Unit * Catching.fleeDistance)
 	moveTo(w, target, Spawning.wanderSpeed * Catching.fleeSpeedMultiplier)
 end
 
@@ -261,9 +289,9 @@ local function startCarrying(player: Player, w: Wild): boolean
 
 	local part = w.part
 	w.prompt:Destroy()
-	part:SetAttribute("CritterUid", nil)
-	part:SetAttribute("LockedBy", nil)
-	part:SetAttribute("TutorialFor", nil)
+	for _, attribute in { "CritterUid", "LockedBy", "TutorialFor", "ReservedFor", "Zone" } do
+		part:SetAttribute(attribute, nil)
+	end
 	part:SetAttribute("Carried", true)
 	part.Anchored = false
 	part.Massless = true
@@ -300,6 +328,16 @@ local function endMinigame(player: Player, success: boolean, failMessage: string
 	Remotes.CatchResult:FireClient(player, false, failMessage or "¡Se ha escapado!")
 end
 
+local function catchWindowFor(player: Player, def: CritterDef): number
+	local base = CrittersConfig.Rarities[def.rarity].catchWindow
+	local profile = Data.Get(player)
+	local redLevel = if profile then profile.upgrades.Red or 0 else 0
+	if player:GetAttribute("Pass_RedDorada") == true then
+		redLevel = Progression.Upgrades.Red.maxLevel
+	end
+	return UpgradeMath.catchWindow(base, redLevel)
+end
+
 startMinigame = function(player: Player, w: Wild)
 	if not passCooldown(player) then
 		return
@@ -314,8 +352,12 @@ startMinigame = function(player: Player, w: Wild)
 	if wild[w.uid] ~= w or w.lockedBy then
 		return
 	end
-	if w.tutorialFor and w.tutorialFor ~= player then
+	if w.reservedFor and w.reservedFor ~= player then
 		notify(player, "Este bicho es de otro jugador.")
+		return
+	end
+	if not Zones.IsUnlocked(player, w.zone) then
+		notify(player, "Primero desbloquea esta zona.")
 		return
 	end
 	local root = getRoot(player)
@@ -330,7 +372,7 @@ startMinigame = function(player: Player, w: Wild)
 	end
 
 	local rarity = CrittersConfig.Rarities[w.def.rarity]
-	local zoneWidth = rarity.catchWindow -- la mejora Red la ampliará
+	local zoneWidth = catchWindowFor(player, w.def)
 	local mg: Minigame = {
 		critter = w,
 		startTime = Workspace:GetServerTimeNow(),
@@ -387,8 +429,17 @@ local function onReleaseCarried(player: Player)
 	carried.part:Destroy()
 
 	local root = getRoot(player)
-	local drop = if root then (root.CFrame * CFrame.new(0, 0, -Catching.releaseDistance)).Position else randomSpawnPoint()
-	spawnWild(carried.def, Vector3.new(drop.X, Gameplay.GroundY, drop.Z), nil)
+	local zone = carried.def.zone
+	local drop = randomSpawnPoint(zone)
+	if root then
+		local front = (root.CFrame * CFrame.new(0, 0, -Catching.releaseDistance)).Position
+		local here = Zones.ZoneAt(front)
+		if here then
+			zone = here
+			drop = front
+		end
+	end
+	spawnWild(carried.def, zone, Vector3.new(drop.X, Gameplay.GroundY, drop.Z), nil, false)
 	notify(player, "Has soltado a " .. carried.def.name .. ".")
 end
 
@@ -418,10 +469,36 @@ end
 local function spawnLoop()
 	while true do
 		task.wait(Spawning.intervalSeconds)
-		if countWild() < Spawning.maxCritters then
-			local def = pickCritter(Spawning.zone)
-			if def then
-				spawnWild(def, randomSpawnPoint(), nil)
+		for zone, area in Gameplay.Zones do
+			if countWild(zone) < area.maxCritters then
+				local def = pickCritter(zone, 1)
+				if def then
+					spawnWild(def, zone, randomSpawnPoint(zone), nil, false)
+				end
+			end
+		end
+	end
+end
+
+-- Suerte x2: un bicho reservado para el jugador, cerca de él, en la zona donde esté.
+local function luckLoop()
+	while true do
+		task.wait(Luck.personalSpawnSeconds)
+		for _, player in Players:GetPlayers() do
+			local profile = Data.Get(player)
+			local root = getRoot(player)
+			if profile and root and profile.luckUntil > os.time() and luckCritter[player] == nil then
+				local zone = Zones.ZoneAt(root.Position)
+				if zone and Zones.IsUnlocked(player, zone) then
+					local def = pickCritter(zone, Luck.rarityMultiplier)
+					if def then
+						local angle = rng:NextNumber(0, math.pi * 2)
+						local point = root.Position + Vector3.new(math.cos(angle), 0, math.sin(angle)) * Luck.spawnDistance
+						point = clampToZone(zone, point)
+						luckCritter[player] = spawnWild(def, zone, Vector3.new(point.X, Gameplay.GroundY, point.Z), player, false)
+						notify(player, "🍀 ¡Ha aparecido un bicho de la suerte solo para ti: " .. def.name .. "!")
+					end
+				end
 			end
 		end
 	end
@@ -432,13 +509,13 @@ local function wanderLoop()
 		task.wait(Spawning.wanderIntervalSeconds)
 		local now = os.clock()
 		for _, w in wild do
-			if w.lockedBy == nil and w.tutorialFor == nil then
+			if w.lockedBy == nil and not w.isTutorial then
 				if now - w.spawnedAt > Spawning.despawnSeconds then
 					removeWild(w)
 					w.part:Destroy()
 				elseif rng:NextNumber() < Spawning.wanderChance then
 					local offset = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)) * Spawning.wanderDistance
-					moveTo(w, clampToBeach(w.part.Position + offset), Spawning.wanderSpeed)
+					moveTo(w, clampToZone(w.zone, w.part.Position + offset), Spawning.wanderSpeed)
 				end
 			end
 		end
@@ -459,17 +536,18 @@ local function giveTutorialCritter(player: Player, character: Model)
 	if player.Parent == nil then
 		return
 	end
-	local def = firstCommonOfZone(Spawning.zone)
+	local zone = Spawning.tutorialZone
+	local def = firstCommonOfZone(zone)
 	if not def then
 		return
 	end
 	local front = (root.CFrame * CFrame.new(0, 0, -Spawning.tutorialDistance)).Position
-	local w = spawnWild(def, Vector3.new(front.X, Gameplay.GroundY, front.Z), player)
+	local w = spawnWild(def, zone, Vector3.new(front.X, Gameplay.GroundY, front.Z), player, true)
 	-- que mire al jugador
 	w.part.CFrame = CFrame.lookAt(w.part.Position, Vector3.new(root.Position.X, w.part.Position.Y, root.Position.Z))
 end
 
--- Si el jugador muere o se va: se cancela el minijuego y el bicho que llevaba vuelve a la playa.
+-- Si el jugador muere o se va: se cancela el minijuego y el bicho que llevaba vuelve a su zona.
 local function dropEverything(player: Player)
 	if minigames[player] then
 		endMinigame(player, false, "¡El bicho se ha escapado!")
@@ -478,7 +556,8 @@ local function dropEverything(player: Player)
 	if carried then
 		carrying[player] = nil
 		carried.part:Destroy()
-		spawnWild(carried.def, randomSpawnPoint(), nil)
+		local zone = carried.def.zone
+		spawnWild(carried.def, zone, randomSpawnPoint(zone), nil, false)
 	end
 end
 
@@ -497,13 +576,14 @@ end
 local function onPlayerRemoving(player: Player)
 	dropEverything(player)
 	for _, w in wild do
-		if w.tutorialFor == player then
+		if w.reservedFor == player then
 			removeWild(w)
 			w.part:Destroy()
 		end
 	end
 	lastAction[player] = nil
 	tutorialGiven[player] = nil
+	luckCritter[player] = nil
 end
 
 function CritterSpawner.Start()
@@ -517,6 +597,7 @@ function CritterSpawner.Start()
 	task.spawn(spawnLoop)
 	task.spawn(wanderLoop)
 	task.spawn(depositLoop)
+	task.spawn(luckLoop)
 end
 
 return CritterSpawner
