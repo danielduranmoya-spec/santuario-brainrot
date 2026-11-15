@@ -17,9 +17,11 @@ local Audio = require(Config:WaitForChild("Audio"))
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Art = require(Config:WaitForChild("Art"))
+local Events = require(Config:WaitForChild("Events"))
 local Format = require(Shared:WaitForChild("Format"))
 
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
+local CONFETTI = "rbxasset://textures/particles/SquareParticle.png"
 local GOLD = Art.colors.gold
 
 local Effects = {}
@@ -150,6 +152,78 @@ local function flashScreen()
 	tween:Play()
 end
 
+-- Confeti de colores: papelitos cuadrados que saltan, giran y caen (un emisor por color).
+local CONFETTI_COLORS = {
+	Color3.fromRGB(255, 80, 110),
+	Color3.fromRGB(255, 200, 50),
+	Color3.fromRGB(80, 200, 255),
+	Color3.fromRGB(120, 230, 110),
+	Color3.fromRGB(190, 120, 255),
+}
+local function confetti(position: Vector3, count: number)
+	local holder = anchorAt(position + Vector3.new(0, 1, 0), 4)
+	local perColor = math.max(1, math.floor(count / #CONFETTI_COLORS))
+	for _, color in CONFETTI_COLORS do
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Texture = CONFETTI
+		emitter.Color = ColorSequence.new(color)
+		emitter.LightEmission = 0.3
+		emitter.Lifetime = NumberRange.new(1.6, 2.6)
+		emitter.Speed = NumberRange.new(16, 26)
+		emitter.SpreadAngle = Vector2.new(40, 40)
+		emitter.EmissionDirection = Enum.NormalId.Top
+		emitter.Acceleration = Vector3.new(0, -28, 0)
+		emitter.Drag = 2.5
+		emitter.Rotation = NumberRange.new(0, 360)
+		emitter.RotSpeed = NumberRange.new(-400, 400)
+		emitter.Size = NumberSequence.new(0.45)
+		emitter.Orientation = Enum.ParticleOrientation.VelocityPerpendicular
+		emitter.Rate = 0
+		emitter.Parent = holder
+		emitter:Emit(perColor)
+	end
+end
+
+-- Onda de choque: un aro del color de la rareza que se abre en el suelo y se desvanece.
+local function shockwave(position: Vector3, color: Color3)
+	local ring = Instance.new("Part")
+	ring.Name = "Onda"
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Size = Vector3.new(0.2, 2, 2)
+	ring.CFrame = CFrame.new(position.X, position.Y - 1, position.Z) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Color = color
+	ring.Material = Enum.Material.Neon
+	ring.Transparency = 0.2
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.CanQuery = false
+	ring.CanTouch = false
+	ring.CastShadow = false
+	ring.Parent = effectsFolder
+	Debris:AddItem(ring, 1)
+	TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.2, 22, 22), Transparency = 1 }):Play()
+end
+
+-- Columna de luz hacia el cielo (Raro o más).
+local function lightColumn(position: Vector3, color: Color3)
+	local column = Instance.new("Part")
+	column.Name = "Columna"
+	column.Shape = Enum.PartType.Cylinder
+	column.Size = Vector3.new(60, 1, 1)
+	column.CFrame = CFrame.new(position.X, position.Y + 29, position.Z) * CFrame.Angles(0, 0, math.rad(90))
+	column.Color = color
+	column.Material = Enum.Material.Neon
+	column.Transparency = 0.3
+	column.Anchored = true
+	column.CanCollide = false
+	column.CanQuery = false
+	column.CanTouch = false
+	column.CastShadow = false
+	column.Parent = effectsFolder
+	Debris:AddItem(column, 1.4)
+	TweenService:Create(column, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(60, 5, 5), Transparency = 1 }):Play()
+end
+
 local function rarityColor(rarity: unknown): Color3
 	if typeof(rarity) == "string" and CrittersConfig.Rarities[rarity] then
 		return CrittersConfig.Rarities[rarity].color
@@ -163,11 +237,17 @@ local function onEffect(kind: string, position: unknown, data: unknown)
 		local burstConfig = if typeof(data) == "string" then Gameplay.CatchBurst[data] else nil
 		local color = rarityColor(data)
 		burst(here, color, if burstConfig then burstConfig.particles else 12, 14, 10, 0.8)
+		confetti(here, if burstConfig then burstConfig.confetti else 20)
+		shockwave(here, color)
 		if burstConfig and burstConfig.flash then
 			flash(here, color, 16)
 		end
+		if burstConfig and burstConfig.column then
+			lightColumn(here, color)
+		end
 	elseif kind == "captura_mia" then
 		Effects.Play("captura_ok")
+		Effects.Play("confeti")
 	elseif kind == "fallo" then
 		Effects.Play("captura_fallo")
 		if here then
@@ -232,9 +312,31 @@ function Effects.Start()
 		sounds[name] = makeSound(name, sound.id, sound.volume, soundFolder)
 	end
 
-	local music = makeSound("MusicaAmbiente", Audio.Music.ambiente.id, Audio.Music.ambiente.volume, soundFolder)
-	music.Looped = true
-	music:Play()
+	-- Música clásica: una pieza de día y otra de noche, con fundido al cambiar.
+	local dayMusic = makeSound("MusicaDia", Audio.Music.dia.id, 0, soundFolder)
+	local nightMusic = makeSound("MusicaNoche", Audio.Music.noche.id, 0, soundFolder)
+	dayMusic.Looped = true
+	nightMusic.Looped = true
+	local fade = TweenInfo.new(Events.DayNight.musicFadeSeconds)
+	local function updateMusic()
+		local night = ReplicatedStorage:GetAttribute("IsNight") == true
+		local playing = if night then nightMusic else dayMusic
+		local stopping = if night then dayMusic else nightMusic
+		if not playing.IsPlaying then
+			playing.TimePosition = 0
+			playing:Play()
+		end
+		TweenService:Create(playing, fade, { Volume = if night then Audio.Music.noche.volume else Audio.Music.dia.volume }):Play()
+		local out = TweenService:Create(stopping, fade, { Volume = 0 })
+		out.Completed:Connect(function()
+			if stopping.Volume <= 0.001 then
+				stopping:Pause()
+			end
+		end)
+		out:Play()
+	end
+	ReplicatedStorage:GetAttributeChangedSignal("IsNight"):Connect(updateMusic)
+	updateMusic()
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EfectosUI"

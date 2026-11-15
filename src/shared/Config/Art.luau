@@ -6,10 +6,11 @@ local Art = {}
 
 Art.seed = 2026 -- cambia la semilla para recolocar palmeras, árboles, rocas y nubes
 
-Art.islandRadius = 310
-Art.palms = 8
-Art.forestTrees = 14
+Art.palms = 10
+Art.forestTrees = 16
 Art.clouds = 10
+Art.islandTrees = 40 -- árboles sueltos por la isla (fuera de zonas)
+Art.islandBushes = 50 -- arbustos y flores sueltos
 Art.volcanoSmokeRate = 3
 Art.pathWidth = 8
 Art.lampSpacing = 24
@@ -41,5 +42,87 @@ Art.ambience = {
 	NubePegajosa = { color = Color3.fromRGB(255, 225, 250), density = 0.3, decay = Color3.fromRGB(220, 190, 240), haze = 1.5, tint = Color3.fromRGB(250, 240, 255) },
 }
 Art.ambienceTweenSeconds = 2
+
+-- Animaciones de los bichos (client/CritterAnimator).
+Art.animation = {
+	fps = 30, -- fotogramas por segundo de la animación (menos = más ligero en móvil)
+	maxDistance = 70, -- solo se animan los bichos a esta distancia de la cámara
+	speed = 3,
+	bobHeight = 0.04, -- balanceo, en proporción al tamaño del bicho
+	blinkEverySeconds = 4,
+	blinkSeconds = 0.12,
+	wingSpeed = 4,
+	wingDegrees = 25,
+	wagDegrees = 15,
+	dropSpeed = 0.8,
+	flying = { tostada_voladora = true, nube_grunona = true }, -- se balancean más
+}
+
+-- Terreno del campo (WorldArt).
+Art.terrain = {
+	depth = 24, -- grosor del suelo bajo la superficie
+	sideHillOffset = 22, -- colinas a cada lado, por fuera de los muros
+	hillSpacing = 22,
+	hillSize = { min = 18, max = 28 },
+	surfaceOffset = 2, -- el terreno se rellena hasta GroundY - 2 y su superficie visible queda en GroundY
+	-- Altura de la hierba animada (0,1 = muy corta, 1 = alta). Bajada a petición del usuario.
+	grassLength = 0.25,
+	waterColor = Color3.fromRGB(30, 140, 200),
+}
+
+-- Límite infranqueable: muros invisibles alrededor del campo (y techo).
+Art.boundary = {
+	height = 400,
+	thickness = 6,
+	segmentLength = 500, -- largo de cada tramo de muro lateral
+	ceilingHeight = 120, -- techo invisible sobre el suelo
+	-- Si un jugador cae por debajo del suelo o sale del campo, vuelve a su santuario.
+	respawnBelowY = -10,
+	respawnMargin = 6,
+	checkSeconds = 0.5,
+}
+
+-- Color de cada temática (puertas, dinteles).
+Art.themeColors = {
+	PlayaRara = Color3.fromRGB(255, 190, 80),
+	BosqueRuidoso = Color3.fromRGB(70, 170, 80),
+	VolcanTimido = Color3.fromRGB(230, 90, 50),
+	NubePegajosa = Color3.fromRGB(190, 160, 255),
+}
+
+-- Plaza de los santuarios.
+Art.hub = {
+	avenueWidth = 18,
+	trees = 10,
+	flowers = 24,
+}
+
+-- Decorado por bóveda (por temática). Pocas piezas: van muchas bóvedas seguidas.
+Art.vaultDecor = {
+	palms = 5,
+	umbrellas = 1,
+	trees = 7,
+	bushes = 3,
+	mushrooms = 2,
+	lavaRocks = 5,
+	clouds = 4,
+	crystals = 3,
+	rocks = 4,
+}
+
+-- Noche (el cliente tiñe la pantalla; el servidor oscurece el cielo).
+Art.night = {
+	tint = Color3.fromRGB(150, 170, 255),
+	brightness = 0.6,
+	ambient = Color3.fromRGB(60, 70, 110),
+}
+
+-- Material del suelo de cada zona (Terrain).
+Art.zoneMaterials = {
+	PlayaRara = Enum.Material.Sand,
+	BosqueRuidoso = Enum.Material.LeafyGrass,
+	VolcanTimido = Enum.Material.Basalt,
+	NubePegajosa = Enum.Material.Snow,
+}
 
 return Art
