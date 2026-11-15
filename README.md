@@ -1,0 +1,25 @@
+# Santuario de Bichos Raros
+
+Primer juego de Roblox del proyecto. Atrapa bichos absurdos con una red, llévalos a tu santuario y deja que generen monedas.
+
+- Diseño: [`design/GDD.md`](design/GDD.md)
+- Balance: [`src/shared/Config/`](src/shared/Config/)
+- Instrucciones para Claude: [`CLAUDE.md`](CLAUDE.md)
+
+## Puesta en marcha (Windows)
+
+1. **Instala Roblox Studio** y abre una plantilla "Baseplate". Guárdala como `SantuarioDeBichosRaros.rbxl` fuera de Git o en esta carpeta (está ignorada).
+2. **Instala Rokit** (gestor de herramientas): https://github.com/rojo-rbx/rokit — en esta carpeta ejecuta `rokit install`. Instala Rojo 7.4.4.
+3. **Instala el plugin de Rojo en Studio:** `rojo plugin install`.
+4. **Sincroniza:** `rojo serve` en esta carpeta y, en Studio, pestaña Plugins › Rojo › Connect. Lo que edites en `src/` aparece en Studio.
+5. **Conecta Claude:** en Studio activa "Enable Studio as MCP server" (Assistant › ajustes) y conecta Claude Code con Quick connect. Abre Claude Code en esta carpeta.
+6. **Sube a GitHub:** crea un repositorio vacío y ejecuta `git remote add origin <url>` y `git push -u origin main`.
+
+Si al principio Rojo te resulta demasiado, puedes empezar con Script Sync de Studio y pasar a Rojo más adelante (ver la guía del proyecto).
+
+## Hoja de ruta del MVP (semanas 7 a 12)
+
+- [ ] Semanas 7–8: bucle principal con piezas grises (aparecen bichos, red, santuario, monedas)
+- [ ] Semanas 9–10: mejoras, guardado de datos, tienda
+- [ ] Semana 11: arte low-poly, sonido, efectos
+- [ ] Semana 12: miniaturas (3 versiones), pruebas en móvil, errores
