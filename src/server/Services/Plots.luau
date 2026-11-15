@@ -1,7 +1,7 @@
 --!strict
--- Santuarios: cada jugador recibe una parcela al entrar. Los bichos colocados en sus huecos
--- generan monedas que se acumulan en el cofre dorado; el dueño las cobra al pisarlo
--- (la mejora Imán ampliará esa distancia en la siguiente fase).
+-- Santuarios: cada jugador recibe una parcela al entrar. Sus bichos (guardados en el perfil) se
+-- colocan en los huecos y generan monedas que se acumulan en el cofre dorado; el dueño las cobra
+-- al pisarlo (el Imán amplía la distancia). Si tiene más bichos que huecos, los demás esperan.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,18 +12,16 @@ local Config = Shared:WaitForChild("Config")
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Progression = require(Config:WaitForChild("Progression"))
+local Shop = require(Config:WaitForChild("Shop"))
 local Format = require(Shared:WaitForChild("Format"))
+local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
 
+local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local CritterVisual = require(script.Parent:WaitForChild("CritterVisual"))
 
 type CritterDef = CrittersConfig.Critter
-
-type Placed = {
-	def: CritterDef,
-	part: BasePart,
-}
 
 type Plot = {
 	index: number,
@@ -31,16 +29,22 @@ type Plot = {
 	origin: CFrame, -- centro de la parcela a ras de suelo; -Z mira hacia la playa
 	ownerLabel: TextLabel,
 	pendingLabel: TextLabel,
+	waitingLabel: TextLabel,
 	collectPad: BasePart,
 	slotPads: { BasePart },
 	owner: Player?,
-	placed: { Placed },
+	parts: { BasePart }, -- bichos dibujados en los huecos
 	pending: number,
 	slotCount: number,
 }
 
 local S = Gameplay.Sanctuary
-local MAX_SLOTS = Progression.StartingSlots + Progression.Upgrades.Santuario.maxLevel
+local MAX_SLOTS = UpgradeMath.slotCount(Progression.Upgrades.Santuario.maxLevel, true)
+
+local defsById: { [string]: CritterDef } = {}
+for _, def in CrittersConfig.List do
+	defsById[def.id] = def
+end
 
 local Plots = {}
 
@@ -95,16 +99,8 @@ local function updatePendingLabel(plot: Plot)
 	plot.pendingLabel.Text = "💰 " .. Format.number(plot.pending) .. "\nPísame para cobrar"
 end
 
-local function refreshSlots(plot: Plot)
-	for i, pad in plot.slotPads do
-		local unlocked = i <= plot.slotCount
-		pad.Transparency = if unlocked then 0 else 1
-		pad.CanQuery = unlocked
-	end
-end
-
 local function buildPlot(index: number): Plot
-	local center = Gameplay.Spawning.center
+	local center = Gameplay.Zones.PlayaRara.center
 	local angle = (index - 1) / S.plotCount * math.pi * 2
 	local position = Vector3.new(
 		center.X + math.cos(angle) * S.ringRadius,
@@ -116,6 +112,8 @@ local function buildPlot(index: number): Plot
 	local model = Instance.new("Model")
 	model.Name = "Santuario" .. index
 	model:SetAttribute("PlotIndex", index)
+	-- Con StreamingEnabled, que el santuario llegue entero (el rayo guía apunta a su suelo).
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	local base = newPart("Suelo", Vector3.new(S.plotSize, 1, S.plotSize), origin * CFrame.new(0, 0.5, 0), Color3.fromRGB(120, 170, 120), model)
 	base.Material = Enum.Material.Grass
@@ -134,6 +132,9 @@ local function buildPlot(index: number): Plot
 	collectPad.Material = Enum.Material.Neon
 	local pendingLabel = newBillboard(collectPad, 8, 2.5, 3)
 
+	local waitingLabel = newBillboard(base, 14, 1.5, 6.5)
+	waitingLabel.TextColor3 = Color3.fromRGB(255, 220, 120)
+
 	local slotPads = {}
 	for i = 1, MAX_SLOTS do
 		local pad = newPart("Hueco" .. i, Vector3.new(4, 0.4, 4), origin * slotOffset(i), Color3.fromRGB(200, 230, 200), model)
@@ -149,14 +150,14 @@ local function buildPlot(index: number): Plot
 		origin = origin,
 		ownerLabel = ownerLabel,
 		pendingLabel = pendingLabel,
+		waitingLabel = waitingLabel,
 		collectPad = collectPad,
 		slotPads = slotPads,
 		owner = nil,
-		placed = {},
+		parts = {},
 		pending = 0,
 		slotCount = Progression.StartingSlots,
 	}
-	refreshSlots(plot)
 	updatePendingLabel(plot)
 	return plot
 end
@@ -170,16 +171,64 @@ local function getRoot(player: Player): BasePart?
 	return nil
 end
 
+local function isVip(player: Player): boolean
+	return player:GetAttribute("Pass_VIP") == true
+end
+
+local function slotCountFor(player: Player): number
+	local profile = Data.Get(player)
+	local level = if profile then profile.upgrades.Santuario or 0 else 0
+	return UpgradeMath.slotCount(level, isVip(player))
+end
+
+-- Vuelve a dibujar los huecos y los bichos del santuario a partir del perfil.
+local function render(plot: Plot)
+	for _, part in plot.parts do
+		part:Destroy()
+	end
+	plot.parts = {}
+
+	local owner = plot.owner
+	local profile = owner and Data.Get(owner)
+	plot.slotCount = if owner then slotCountFor(owner) else Progression.StartingSlots
+
+	for i, pad in plot.slotPads do
+		local unlocked = i <= plot.slotCount
+		pad.Transparency = if unlocked then 0 else 1
+		pad.CanQuery = unlocked
+	end
+
+	local waiting = 0
+	if profile then
+		for i, id in profile.critters do
+			local def = defsById[id]
+			if i > plot.slotCount then
+				waiting += 1
+			elseif def then
+				local pad = plot.slotPads[i]
+				local part = CritterVisual.create(def)
+				part.CFrame = pad.CFrame * CFrame.new(0, pad.Size.Y / 2 + part.Size.Y / 2, 0)
+				CritterVisual.setDetail(part, "+" .. Format.number(def.coinsPerSecond) .. "/s")
+				part.Parent = plot.model
+				table.insert(plot.parts, part)
+			end
+		end
+	end
+	plot.waitingLabel.Text = if waiting > 0 then "+" .. waiting .. " bichos esperando hueco (mejora el Santuario)" else ""
+	if owner then
+		owner:SetAttribute("CritterCount", if profile then #profile.critters else 0)
+	end
+end
+
 local function assign(player: Player)
 	for _, plot in plots do
 		if plot.owner == nil then
 			plot.owner = player
 			plot.pending = 0
-			plot.slotCount = Progression.StartingSlots -- la mejora Santuario lo subirá
 			plot.model:SetAttribute("OwnerUserId", player.UserId)
 			plot.ownerLabel.Text = "Santuario de " .. player.DisplayName
 			byPlayer[player] = plot
-			refreshSlots(plot)
+			render(plot)
 			updatePendingLabel(plot)
 			return
 		end
@@ -187,20 +236,21 @@ local function assign(player: Player)
 	Remotes.Notify:FireClient(player, "No quedan santuarios libres en este servidor.")
 end
 
+-- Al salir: lo que quedaba en el cofre se suma a sus monedas antes del último guardado.
 local function release(player: Player)
 	local plot = byPlayer[player]
 	if not plot then
 		return
 	end
-	byPlayer[player] = nil
-	for _, placed in plot.placed do
-		placed.part:Destroy()
+	if plot.pending >= 1 then
+		Economy.AddCoins(player, math.floor(plot.pending))
 	end
-	plot.placed = {}
+	byPlayer[player] = nil
 	plot.owner = nil
 	plot.pending = 0
 	plot.model:SetAttribute("OwnerUserId", nil)
 	plot.ownerLabel.Text = "Santuario libre"
+	render(plot)
 	updatePendingLabel(plot)
 end
 
@@ -215,33 +265,56 @@ function Plots.IsInOwnPlot(player: Player, position: Vector3): boolean
 	return math.abs(localPosition.X) <= half and math.abs(localPosition.Z) <= half
 end
 
--- Coloca un bicho en el primer hueco libre. Devuelve si se pudo y el mensaje para el jugador.
+-- Coloca un bicho capturado en el primer hueco libre. Devuelve si se pudo y el mensaje para el jugador.
 function Plots.AddCritter(player: Player, def: CritterDef): (boolean, string)
 	local plot = byPlayer[player]
-	if not plot then
+	local profile = Data.Get(player)
+	if not plot or not profile then
 		return false, "No tienes santuario en este servidor."
 	end
-	if #plot.placed >= plot.slotCount then
-		return false, "¡Tu santuario está lleno! Pulsa SOLTAR para liberar al bicho."
+	if #profile.critters >= plot.slotCount then
+		return false, "¡Tu santuario está lleno! Mejóralo en MEJORAS o pulsa SOLTAR."
 	end
-
-	local pad = plot.slotPads[#plot.placed + 1]
-	local part = CritterVisual.create(def)
-	part.CFrame = pad.CFrame * CFrame.new(0, pad.Size.Y / 2 + part.Size.Y / 2, 0)
-	CritterVisual.setDetail(part, "+" .. Format.number(def.coinsPerSecond) .. "/s")
-	part.Parent = plot.model
-	table.insert(plot.placed, { def = def, part = part })
-
+	table.insert(profile.critters, def.id)
+	render(plot)
 	return true, "¡" .. def.name .. " ya genera +" .. Format.number(def.coinsPerSecond) .. " monedas/s!"
+end
+
+-- Da un bicho (premio o compra) aunque no haya hueco: si no cabe, espera a que mejores el santuario.
+function Plots.GrantCritter(player: Player, def: CritterDef)
+	local profile = Data.Get(player)
+	if not profile then
+		return
+	end
+	table.insert(profile.critters, def.id)
+	local plot = byPlayer[player]
+	if plot then
+		render(plot)
+	end
+end
+
+-- Redibuja el santuario (tras mejorar el Santuario o comprar VIP).
+function Plots.Refresh(player: Player)
+	local plot = byPlayer[player]
+	if plot then
+		render(plot)
+	end
 end
 
 function Plots.GetIncomePerSecond(player: Player): number
 	local plot = byPlayer[player]
+	local profile = Data.Get(player)
 	local total = 0
-	if plot then
-		for _, placed in plot.placed do
-			total += placed.def.coinsPerSecond
+	if plot and profile then
+		for i, id in profile.critters do
+			local def = defsById[id]
+			if i <= plot.slotCount and def then
+				total += def.coinsPerSecond
+			end
 		end
+	end
+	if player:GetAttribute("Pass_DobleMonedas") == true then
+		total *= Shop.Perks.doubleCoinsMultiplier
 	end
 	return total
 end
@@ -263,17 +336,18 @@ local function coinLoop()
 	end
 end
 
--- Si el dueño pisa el cofre, cobra lo acumulado.
+-- Si el dueño está cerca del cofre (más lejos con el Imán), cobra lo acumulado.
 local function collectLoop()
 	while true do
 		task.wait(S.collectCheckSeconds)
 		for _, plot in plots do
 			local owner = plot.owner
 			local root = owner and getRoot(owner)
-			if owner and root and plot.pending >= 1 then
+			local profile = owner and Data.Get(owner)
+			if owner and root and profile and plot.pending >= 1 then
 				local offset = root.Position - plot.collectPad.Position
 				local flatDistance = Vector3.new(offset.X, 0, offset.Z).Magnitude
-				if flatDistance <= S.collectRadius then
+				if flatDistance <= UpgradeMath.collectRadius(profile.upgrades.Iman or 0) then
 					local amount = math.floor(plot.pending)
 					plot.pending -= amount
 					Economy.AddCoins(owner, amount)
@@ -294,7 +368,7 @@ local function ensureSpawnLocation()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.Position = Gameplay.Spawning.center + Vector3.new(0, Gameplay.GroundY + 0.5, 0)
+	spawn.Position = Gameplay.Zones.PlayaRara.center + Vector3.new(0, Gameplay.GroundY + 0.5, 0)
 	spawn.Parent = Workspace
 end
 
@@ -304,10 +378,15 @@ function Plots.Start()
 		table.insert(plots, buildPlot(i))
 	end
 	Players.PlayerAdded:Connect(assign)
-	Players.PlayerRemoving:Connect(release)
 	for _, player in Players:GetPlayers() do
 		assign(player)
 	end
+	Data.OnLoaded(function(player)
+		Plots.Refresh(player)
+	end)
+	Data.OnRelease(function(player)
+		release(player)
+	end)
 	task.spawn(coinLoop)
 	task.spawn(collectLoop)
 end

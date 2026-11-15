@@ -16,6 +16,8 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CatchBar = require(Shared:WaitForChild("CatchBar"))
 local Format = require(Shared:WaitForChild("Format"))
+local Menus = require(script.Parent:WaitForChild("Menus"))
+local ZoneBarriers = require(script.Parent:WaitForChild("ZoneBarriers"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StartMinigame = remotes:WaitForChild("StartMinigame") :: RemoteEvent
@@ -107,7 +109,8 @@ coinsLabel.Text = "💰 0"
 local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.14), gui)
 hintLabel.Visible = false
 
-local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.06), UDim2.fromScale(0.5, 0.24), gui)
+local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.25), gui)
+toastLabel.TextWrapped = true
 toastLabel.Visible = false
 
 -- Barra del minijuego
@@ -159,7 +162,8 @@ local function showToast(text: string, color: Color3?)
 	toastLabel.Text = text
 	toastLabel.TextColor3 = color or Color3.new(1, 1, 1)
 	toastLabel.Visible = true
-	task.delay(3, function()
+	-- Los avisos largos se quedan más tiempo en pantalla.
+	task.delay(3 + #text / 25, function()
 		if toastId == myId then
 			toastLabel.Visible = false
 		end
@@ -320,6 +324,13 @@ end)
 Notify.OnClientEvent:Connect(function(message: string)
 	showToast(message)
 end)
+
+-- Menús de MEJORAS/TIENDA y barreras de zona.
+Menus.OnLocalNotice = function(text: string)
+	showToast(text)
+end
+Menus.Start()
+ZoneBarriers.Start()
 
 local function tryCatch()
 	if minigame and not waitingResult then
