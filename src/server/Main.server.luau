@@ -1,23 +1,15 @@
 --!strict
--- Punto de entrada del servidor. Por ahora: leaderstats de Monedas.
--- Siguientes pasos (semanas 7-8, ver design/GDD.md): Services/CritterSpawner, Services/Sanctuary,
--- Services/Data (DataStore) y Services/Purchases (ProcessReceipt).
+-- Punto de entrada del servidor: arranca los servicios del bucle principal (semanas 7-8, ver design/GDD.md).
+-- Siguientes pasos: Services/Data (DataStore), mejoras, tienda y Services/Purchases (ProcessReceipt).
 
-local Players = game:GetService("Players")
+local Services = script.Parent:WaitForChild("Services")
 
-local function onPlayerAdded(player: Player)
-	local leaderstats = Instance.new("Folder")
-	leaderstats.Name = "leaderstats"
+local Economy = require(Services:WaitForChild("Economy"))
+local Plots = require(Services:WaitForChild("Plots"))
+local CritterSpawner = require(Services:WaitForChild("CritterSpawner"))
 
-	local coins = Instance.new("IntValue")
-	coins.Name = "Monedas"
-	coins.Value = 0
-	coins.Parent = leaderstats
+Economy.Start()
+Plots.Start()
+CritterSpawner.Start()
 
-	leaderstats.Parent = player
-end
-
-Players.PlayerAdded:Connect(onPlayerAdded)
-for _, player in Players:GetPlayers() do
-	onPlayerAdded(player)
-end
+print("Santuario de Bichos Raros: servidor listo")

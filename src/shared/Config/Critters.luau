@@ -15,11 +15,11 @@ local Critters = {}
 
 -- Probabilidad relativa de aparición y tamaño de la zona verde del minijuego (0-1).
 Critters.Rarities = {
-	Comun = { weight = 60, catchWindow = 0.35, color = Color3.fromRGB(200, 200, 200) },
-	PocoComun = { weight = 25, catchWindow = 0.25, color = Color3.fromRGB(90, 200, 90) },
-	Raro = { weight = 10, catchWindow = 0.18, color = Color3.fromRGB(70, 140, 255) },
-	Epico = { weight = 4, catchWindow = 0.12, color = Color3.fromRGB(170, 80, 255) },
-	Legendario = { weight = 1, catchWindow = 0.08, color = Color3.fromRGB(255, 190, 40) },
+	Comun = { label = "Común", weight = 60, catchWindow = 0.35, color = Color3.fromRGB(200, 200, 200) },
+	PocoComun = { label = "Poco común", weight = 25, catchWindow = 0.25, color = Color3.fromRGB(90, 200, 90) },
+	Raro = { label = "Raro", weight = 10, catchWindow = 0.18, color = Color3.fromRGB(70, 140, 255) },
+	Epico = { label = "Épico", weight = 4, catchWindow = 0.12, color = Color3.fromRGB(170, 80, 255) },
+	Legendario = { label = "Legendario", weight = 1, catchWindow = 0.08, color = Color3.fromRGB(255, 190, 40) },
 }
 
 Critters.List = {
