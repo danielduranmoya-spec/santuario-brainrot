@@ -141,6 +141,7 @@ local function processReceipt(info: { [string]: any }): Enum.ProductPurchaseDeci
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	notify(player, message)
+	Remotes.Effect:FireClient(player, "recompensa")
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
 
@@ -193,6 +194,7 @@ function Purchases.Start()
 		if purchased and name then
 			setPass(player, name, true)
 			notify(player, "🎉 ¡Gracias! Ya tienes " .. Shop.GamePasses[name].title .. ".")
+			Remotes.Effect:FireClient(player, "recompensa")
 		end
 	end)
 	Remotes.PromptPurchase.OnServerEvent:Connect(onPromptPurchase)

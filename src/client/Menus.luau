@@ -13,6 +13,7 @@ local Progression = require(Config:WaitForChild("Progression"))
 local Shop = require(Config:WaitForChild("Shop"))
 local Format = require(Shared:WaitForChild("Format"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
+local Effects = require(script.Parent:WaitForChild("Effects"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local BuyUpgrade = remotes:WaitForChild("BuyUpgrade") :: RemoteEvent
@@ -59,6 +60,7 @@ local function newButton(parent: Instance, size: UDim2, position: UDim2, color: 
 	button.Text = text
 	button.Parent = parent
 	addCorner(button)
+	Effects.BindButton(button)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0.18, 0)
 	padding.PaddingBottom = UDim.new(0.18, 0)
@@ -170,10 +172,16 @@ function Menus.Start()
 	upgradesButton.Activated:Connect(function()
 		shopPanel.Visible = false
 		upgradesPanel.Visible = not upgradesPanel.Visible
+		if upgradesPanel.Visible then
+			Effects.Pop(upgradesPanel)
+		end
 	end)
 	shopButton.Activated:Connect(function()
 		upgradesPanel.Visible = false
 		shopPanel.Visible = not shopPanel.Visible
+		if shopPanel.Visible then
+			Effects.Pop(shopPanel)
+		end
 	end)
 
 	-- ===== Mejoras =====

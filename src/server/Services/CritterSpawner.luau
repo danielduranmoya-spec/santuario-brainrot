@@ -12,6 +12,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -225,7 +227,7 @@ local startMinigame: (player: Player, w: Wild) -> ()
 local function spawnWild(def: CritterDef, zone: string, groundPosition: Vector3, reservedFor: Player?, isTutorial: boolean): Wild
 	local part = CritterVisual.create(def)
 	local uid = HttpService:GenerateGUID(false)
-	part.CFrame = CFrame.new(groundPosition + Vector3.new(0, part.Size.Y / 2, 0))
+	part.CFrame = CFrame.new(groundPosition + Vector3.new(0, part.Size.Y / 2 + Gameplay.CritterLift, 0))
 	part:SetAttribute("CritterUid", uid)
 	part:SetAttribute("Zone", zone)
 	if reservedFor then
@@ -316,8 +318,11 @@ local function endMinigame(player: Player, success: boolean, failMessage: string
 	minigames[player] = nil
 	local w = mg.critter
 
+	local position = w.part.Position
 	if success and w.part.Parent ~= nil and startCarrying(player, w) then
 		Remotes.CatchResult:FireClient(player, true, "¡Has atrapado: " .. w.def.name .. "! Llévalo a tu santuario.")
+		Remotes.Effect:FireAllClients("captura", position, w.def.rarity) -- todos ven las chispas
+		Remotes.Effect:FireClient(player, "captura_mia")
 		return
 	end
 
@@ -325,6 +330,7 @@ local function endMinigame(player: Player, success: boolean, failMessage: string
 		setLocked(w, nil)
 		flee(w, player)
 	end
+	Remotes.Effect:FireClient(player, "fallo", position)
 	Remotes.CatchResult:FireClient(player, false, failMessage or "¡Se ha escapado!")
 end
 
@@ -598,6 +604,26 @@ function CritterSpawner.Start()
 	task.spawn(wanderLoop)
 	task.spawn(depositLoop)
 	task.spawn(luckLoop)
+
+	-- Solo en Studio: ServerStorage.DebugCrearBicho:Invoke(player, "id_del_bicho") crea ese bicho
+	-- reservado delante del jugador, para revisar modelos y probar capturas. No existe en el juego publicado.
+	if RunService:IsStudio() then
+		local debugSpawn = Instance.new("BindableFunction")
+		debugSpawn.Name = "DebugCrearBicho"
+		debugSpawn.OnInvoke = function(player: Player, critterId: string)
+			local root = getRoot(player)
+			for _, def in CrittersConfig.List do
+				if def.id == critterId and root then
+					local front = (root.CFrame * CFrame.new(0, 0, -8)).Position
+					local zone = Zones.ZoneAt(front) or def.zone
+					spawnWild(def, zone, Vector3.new(front.X, Gameplay.GroundY, front.Z), player, false)
+					return true
+				end
+			end
+			return false
+		end
+		debugSpawn.Parent = ServerStorage
+	end
 end
 
 return CritterSpawner

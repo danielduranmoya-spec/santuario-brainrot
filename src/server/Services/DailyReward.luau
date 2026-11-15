@@ -58,6 +58,7 @@ local function grant(player: Player, profile: Data.Profile)
 	-- Esperamos un poco para que el aviso no se pise con los primeros mensajes de la partida.
 	task.delay(Gameplay.Data.studioWarningDelaySeconds * 2, function()
 		if player.Parent then
+			Remotes.Effect:FireClient(player, "recompensa")
 			Remotes.Notify:FireClient(player, "🎁 Recompensa diaria (día " .. streak .. "/" .. days .. "): " .. table.concat(parts, " y "))
 		end
 	end)

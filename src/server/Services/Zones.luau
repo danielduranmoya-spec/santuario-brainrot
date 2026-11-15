@@ -106,6 +106,7 @@ local function tryUnlock(player: Player, zoneId: string)
 	profile.zones[zoneId] = true
 	Data.Replicate(player)
 	Remotes.Notify:FireClient(player, "🔓 ¡Has desbloqueado " .. zone.name .. "!")
+	Remotes.Effect:FireClient(player, "desbloqueo", gate.Position)
 end
 
 local function buildZone(zone: { id: string, name: string, unlockCost: number })
@@ -152,7 +153,22 @@ local function buildZone(zone: { id: string, name: string, unlockCost: number })
 		gate.Material = Enum.Material.Neon
 		gate.CanCollide = false
 		gate:SetAttribute("ZoneId", zone.id)
+		gate.Transparency = 0.25
 		gates[zone.id] = gate
+
+		-- Arco de piedra alrededor de la puerta (se queda aunque la puerta desaparezca al desbloquear).
+		for _, side in { -1, 1 } do
+			local pillar = newPart("Pilar", model)
+			pillar.Size = Vector3.new(1.4, 8, 1.4)
+			pillar.CFrame = gate.CFrame * CFrame.new(side * 2.9, 1, 0)
+			pillar.Color = Color3.fromRGB(150, 140, 130)
+			pillar.Material = Enum.Material.Slate
+		end
+		local lintel = newPart("Dintel", model)
+		lintel.Size = Vector3.new(7.2, 1.2, 1.8)
+		lintel.CFrame = gate.CFrame * CFrame.new(0, 5.4, 0)
+		lintel.Color = area.color
+		lintel.Material = Enum.Material.Slate
 		newBillboard(gate, "🔒 " .. zone.name .. "\n" .. Format.number(zone.unlockCost) .. " 💰", 7)
 
 		local prompt = Instance.new("ProximityPrompt")

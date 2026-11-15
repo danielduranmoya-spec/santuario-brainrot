@@ -15,6 +15,7 @@ local Progression = require(Config:WaitForChild("Progression"))
 local Shop = require(Config:WaitForChild("Shop"))
 local Format = require(Shared:WaitForChild("Format"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
+local Art = require(Config:WaitForChild("Art"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
@@ -115,25 +116,63 @@ local function buildPlot(index: number): Plot
 	-- Con StreamingEnabled, que el santuario llegue entero (el rayo guía apunta a su suelo).
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
-	local base = newPart("Suelo", Vector3.new(S.plotSize, 1, S.plotSize), origin * CFrame.new(0, 0.5, 0), Color3.fromRGB(120, 170, 120), model)
+	local base = newPart("Suelo", Vector3.new(S.plotSize, 1, S.plotSize), origin * CFrame.new(0, 0.5, 0), Art.colors.plotGrass, model)
 	base.Material = Enum.Material.Grass
 	model.PrimaryPart = base
 	local ownerLabel = newBillboard(base, 16, 3, 9)
 	ownerLabel.Text = "Santuario libre"
 
-	local collectPad = newPart(
-		"Cofre",
-		Vector3.new(1, 5, 5),
-		origin * CFrame.new(0, 1.5, -S.plotSize / 2 + 4) * CFrame.Angles(0, 0, math.rad(90)),
-		Color3.fromRGB(255, 200, 40),
-		model
-	)
+	-- Plataforma dorada para cobrar (se pisa) con un cofre de madera detrás.
+	local padCFrame = origin * CFrame.new(0, 1.15, -S.plotSize / 2 + 4)
+	local collectPad = newPart("Cofre", Vector3.new(0.3, 6, 6), padCFrame * CFrame.Angles(0, 0, math.rad(90)), Art.colors.gold, model)
 	collectPad.Shape = Enum.PartType.Cylinder
 	collectPad.Material = Enum.Material.Neon
-	local pendingLabel = newBillboard(collectPad, 8, 2.5, 3)
+	collectPad.Transparency = 0.2
+	local pendingLabel = newBillboard(collectPad, 8, 2.5, 5)
+
+	local chestBase = padCFrame * CFrame.new(0, 0, 2.2)
+	local chest = newPart("CofreCaja", Vector3.new(2.6, 1.6, 1.6), chestBase * CFrame.new(0, 0.95, 0), Art.colors.chest, model)
+	chest.Material = Enum.Material.Wood
+	chest.CanCollide = false
+	local lid = newPart("CofreTapa", Vector3.new(1.6, 2.6, 1.6), chestBase * CFrame.new(0, 1.75, 0) * CFrame.Angles(0, math.rad(90), math.rad(90)), Art.colors.chest, model)
+	lid.Shape = Enum.PartType.Cylinder
+	lid.Material = Enum.Material.Wood
+	lid.CanCollide = false
+	for _, x in { -0.9, 0.9 } do
+		local band = newPart("CofreBanda", Vector3.new(0.2, 2.5, 1.7), chestBase * CFrame.new(x, 1.3, 0), Art.colors.gold, model)
+		band.CanCollide = false
+		band.CastShadow = false
+	end
+	local coinPile = newPart("Monedas", Vector3.new(1.2, 0.5, 0.9), chestBase * CFrame.new(0, 2.3, -0.2), Art.colors.gold, model)
+	coinPile.Material = Enum.Material.Neon
+	coinPile.CanCollide = false
+	coinPile.CastShadow = false
+
+	-- Valla de madera en los lados y detrás (el frente queda abierto hacia la playa).
+	local half = S.plotSize / 2
+	local function fenceSide(from: Vector3, to: Vector3)
+		local middle = (from + to) / 2
+		local length = (to - from).Magnitude
+		for _, height in { 1.8, 3 } do
+			local rail = newPart("Valla", Vector3.new(0.3, 0.3, length), origin * CFrame.lookAt(middle + Vector3.new(0, height, 0), to + Vector3.new(0, height, 0)), Art.colors.fence, model)
+			rail.Material = Enum.Material.Wood
+			rail.CastShadow = false
+		end
+		local posts = math.floor(length / 7)
+		for i = 0, posts do
+			local point = from:Lerp(to, i / posts)
+			local post = newPart("Poste", Vector3.new(0.6, 3.4, 0.6), origin * CFrame.new(point + Vector3.new(0, 2.2, 0)), Art.colors.fence, model)
+			post.Material = Enum.Material.Wood
+			post.CastShadow = false
+		end
+	end
+	fenceSide(Vector3.new(-half, 0, -half), Vector3.new(-half, 0, half))
+	fenceSide(Vector3.new(half, 0, -half), Vector3.new(half, 0, half))
+	fenceSide(Vector3.new(-half, 0, half), Vector3.new(half, 0, half))
 
 	local waitingLabel = newBillboard(base, 14, 1.5, 6.5)
 	waitingLabel.TextColor3 = Color3.fromRGB(255, 220, 120)
+	waitingLabel.Text = ""
 
 	local slotPads = {}
 	for i = 1, MAX_SLOTS do
@@ -277,6 +316,10 @@ function Plots.AddCritter(player: Player, def: CritterDef): (boolean, string)
 	end
 	table.insert(profile.critters, def.id)
 	render(plot)
+	local pad = plot.slotPads[#profile.critters]
+	if pad then
+		Remotes.Effect:FireClient(player, "deposito", pad.Position + Vector3.new(0, 2, 0), def.rarity)
+	end
 	return true, "¡" .. def.name .. " ya genera +" .. Format.number(def.coinsPerSecond) .. " monedas/s!"
 end
 
@@ -352,6 +395,7 @@ local function collectLoop()
 					plot.pending -= amount
 					Economy.AddCoins(owner, amount)
 					updatePendingLabel(plot)
+					Remotes.Effect:FireClient(owner, "monedas", plot.collectPad.Position, amount)
 				end
 			end
 		end
