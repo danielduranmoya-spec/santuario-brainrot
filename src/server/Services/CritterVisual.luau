@@ -34,7 +34,8 @@ end
 
 local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: number): BasePart
 	local part = Instance.new("Part")
-	part.Name = "Detalle"
+	part.Name = spec.name or "Detalle"
+	part.Transparency = spec.transparency or 0
 	if spec.shape == "Ball" then
 		part.Shape = Enum.PartType.Ball
 	elseif spec.shape == "Cylinder" then
@@ -102,14 +103,14 @@ function CritterVisual.create(def: CritterDef): Part
 	-- Aro de rareza en el suelo (siempre visible, barato).
 	local ring = detailPart(root, {
 		shape = "Cylinder",
-		size = Vector3.new(0.06, 1.5, 1.5),
+		size = Vector3.new(0.05, 1.3, 1.3),
 		pos = Vector3.new(0, -0.46, 0),
 		color = rarity.color,
 		rot = Vector3.new(0, 0, 90),
 		material = Enum.Material.Neon,
 	}, size)
 	ring.Name = "AroRareza"
-	ring.Transparency = 0.15
+	ring.Transparency = 0.4
 
 	local glow = Gameplay.RarityGlow[def.rarity]
 	if glow and glow.light > 0 then
@@ -135,7 +136,7 @@ function CritterVisual.create(def: CritterDef): Part
 
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Etiqueta"
-	gui.Size = UDim2.new(8, 0, 2, 0) -- en studs
+	gui.Size = UDim2.new(5.5, 0, 1.4, 0) -- en studs
 	gui.StudsOffsetWorldSpace = Vector3.new(0, size / 2 + 1.5, 0)
 	gui.MaxDistance = Gameplay.Spawning.labelMaxDistance
 	gui.LightInfluence = 0

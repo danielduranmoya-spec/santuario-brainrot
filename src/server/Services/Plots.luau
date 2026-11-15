@@ -336,6 +336,15 @@ function Plots.GrantCritter(player: Player, def: CritterDef)
 	end
 end
 
+-- Punto seguro delante del santuario del jugador (para reaparecer si se sale del mapa).
+function Plots.GetSafeCFrame(player: Player): CFrame?
+	local plot = byPlayer[player]
+	if not plot then
+		return nil
+	end
+	return plot.origin * CFrame.new(0, 4, -S.plotSize / 2 - 4)
+end
+
 -- Redibuja el santuario (tras mejorar el Santuario o comprar VIP).
 function Plots.Refresh(player: Player)
 	local plot = byPlayer[player]

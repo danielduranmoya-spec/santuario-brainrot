@@ -20,6 +20,7 @@ local Menus = require(script.Parent:WaitForChild("Menus"))
 local ZoneBarriers = require(script.Parent:WaitForChild("ZoneBarriers"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local Ambience = require(script.Parent:WaitForChild("Ambience"))
+local CritterAnimator = require(script.Parent:WaitForChild("CritterAnimator"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StartMinigame = remotes:WaitForChild("StartMinigame") :: RemoteEvent
@@ -341,6 +342,7 @@ end
 Menus.Start()
 ZoneBarriers.Start()
 Ambience.Start()
+CritterAnimator.Start()
 
 local function tryCatch()
 	if minigame and not waitingResult then

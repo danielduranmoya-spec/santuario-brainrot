@@ -120,16 +120,7 @@ local function buildZone(zone: { id: string, name: string, unlockCost: number })
 	-- Con StreamingEnabled, que la zona llegue entera a todos los clientes y no se descargue.
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
-	-- Suelo de color (fino y sin colisión: se camina sobre el Baseplate).
-	local floor = newPart("Suelo", model)
-	floor.Shape = Enum.PartType.Cylinder
-	floor.Size = Vector3.new(0.2, area.radius * 2, area.radius * 2)
-	floor.CFrame = CFrame.new(area.center + Vector3.new(0, Gameplay.GroundY + 0.1, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	floor.Color = area.color
-	floor.Material = Enum.Material.SmoothPlastic
-	floor.CanCollide = false
-	floor.CanQuery = false
-
+	-- El suelo de cada zona lo pinta WorldArt con Terrain (material de Config/Art.zoneMaterials).
 	if zone.unlockCost > 0 then
 		local barrier = newPart("Barrera", model)
 		barrier.Shape = Enum.PartType.Cylinder

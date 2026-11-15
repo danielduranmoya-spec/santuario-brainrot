@@ -181,6 +181,17 @@ local function clampToZone(zone: string, point: Vector3): Vector3
 	return Vector3.new(area.center.X + flat.X, point.Y, area.center.Z + flat.Z)
 end
 
+-- Altura real del suelo (Terrain) en un punto: el terreno no es perfectamente plano.
+local groundParams = RaycastParams.new()
+groundParams.FilterType = Enum.RaycastFilterType.Include
+groundParams.FilterDescendantsInstances = { Workspace.Terrain }
+groundParams.IgnoreWater = true
+
+local function groundYAt(x: number, z: number): number
+	local hit = Workspace:Raycast(Vector3.new(x, Gameplay.GroundY + 60, z), Vector3.new(0, -120, 0), groundParams)
+	return if hit then hit.Position.Y else Gameplay.GroundY
+end
+
 local function setLocked(w: Wild, player: Player?)
 	w.lockedBy = player
 	w.prompt.Enabled = player == nil
@@ -193,12 +204,12 @@ local function moveTo(w: Wild, target: Vector3, speed: number)
 		w.tween = nil
 	end
 	local from = w.part.Position
-	local goal = Vector3.new(target.X, from.Y, target.Z)
+	local goal = Vector3.new(target.X, groundYAt(target.X, target.Z) + w.part.Size.Y / 2 + Gameplay.CritterLift, target.Z)
 	local distance = (goal - from).Magnitude
 	if distance < 0.1 then
 		return
 	end
-	local direction = (goal - from).Unit
+	local direction = Vector3.new(goal.X - from.X, 0, goal.Z - from.Z).Unit
 	w.part.CFrame = CFrame.lookAt(from, from + direction)
 	local tween = TweenService:Create(
 		w.part,
@@ -227,7 +238,8 @@ local startMinigame: (player: Player, w: Wild) -> ()
 local function spawnWild(def: CritterDef, zone: string, groundPosition: Vector3, reservedFor: Player?, isTutorial: boolean): Wild
 	local part = CritterVisual.create(def)
 	local uid = HttpService:GenerateGUID(false)
-	part.CFrame = CFrame.new(groundPosition + Vector3.new(0, part.Size.Y / 2 + Gameplay.CritterLift, 0))
+	local groundY = groundYAt(groundPosition.X, groundPosition.Z)
+	part.CFrame = CFrame.new(groundPosition.X, groundY + part.Size.Y / 2 + Gameplay.CritterLift, groundPosition.Z)
 	part:SetAttribute("CritterUid", uid)
 	part:SetAttribute("Zone", zone)
 	if reservedFor then

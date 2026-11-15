@@ -6,10 +6,11 @@ local Art = {}
 
 Art.seed = 2026 -- cambia la semilla para recolocar palmeras, árboles, rocas y nubes
 
-Art.islandRadius = 310
-Art.palms = 8
-Art.forestTrees = 14
+Art.palms = 10
+Art.forestTrees = 16
 Art.clouds = 10
+Art.islandTrees = 40 -- árboles sueltos por la isla (fuera de zonas)
+Art.islandBushes = 50 -- arbustos y flores sueltos
 Art.volcanoSmokeRate = 3
 Art.pathWidth = 8
 Art.lampSpacing = 24
@@ -41,5 +42,56 @@ Art.ambience = {
 	NubePegajosa = { color = Color3.fromRGB(255, 225, 250), density = 0.3, decay = Color3.fromRGB(220, 190, 240), haze = 1.5, tint = Color3.fromRGB(250, 240, 255) },
 }
 Art.ambienceTweenSeconds = 2
+
+-- Animaciones de los bichos (client/CritterAnimator).
+Art.animation = {
+	fps = 30, -- fotogramas por segundo de la animación (menos = más ligero en móvil)
+	maxDistance = 70, -- solo se animan los bichos a esta distancia de la cámara
+	speed = 3,
+	bobHeight = 0.04, -- balanceo, en proporción al tamaño del bicho
+	blinkEverySeconds = 4,
+	blinkSeconds = 0.12,
+	wingSpeed = 4,
+	wingDegrees = 25,
+	wagDegrees = 15,
+	dropSpeed = 0.8,
+	flying = { tostada_voladora = true, nube_grunona = true }, -- se balancean más
+}
+
+-- Terreno del mapa (WorldArt). Los radios se miden desde el centro de la Playa.
+Art.terrain = {
+	islandRadius = 300, -- hierba jugable
+	shoreWidth = 24, -- arena entre la hierba y el mar
+	islandDepth = 24, -- grosor de la isla bajo el suelo
+	seaRadius = 520, -- hasta dónde llega el mar
+	seaDepth = 30,
+	waterLevel = -2, -- superficie del mar (el suelo de la isla está en 0)
+	mountainRadius = 318, -- anillo de montañas en el borde
+	mountainCount = 30,
+	mountainSize = { min = 26, max = 40 },
+	waterColor = Color3.fromRGB(30, 140, 200),
+	surfaceOffset = 2, -- el terreno se rellena hasta GroundY - 2 y su superficie visible queda en GroundY
+}
+
+-- Límite infranqueable: muro invisible alrededor del mapa jugable (y techo).
+Art.boundary = {
+	radius = 296, -- por dentro de las montañas
+	segments = 48,
+	height = 400,
+	thickness = 6,
+	ceilingHeight = 260,
+	-- Si un jugador cae por debajo de esta altura o sale de este radio, vuelve a su santuario.
+	respawnBelowY = -8,
+	respawnBeyondRadius = 305,
+	checkSeconds = 0.5,
+}
+
+-- Material del suelo de cada zona (Terrain).
+Art.zoneMaterials = {
+	PlayaRara = Enum.Material.Sand,
+	BosqueRuidoso = Enum.Material.LeafyGrass,
+	VolcanTimido = Enum.Material.Basalt,
+	NubePegajosa = Enum.Material.Snow,
+}
 
 return Art

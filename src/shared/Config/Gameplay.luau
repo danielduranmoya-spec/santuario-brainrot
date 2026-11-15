@@ -4,8 +4,8 @@
 
 local Gameplay = {}
 
--- Altura del suelo (la parte de arriba del Baseplate está en Y = 0).
-Gameplay.GroundY = 0
+-- Altura del suelo. El terreno (Terrain) se dibuja en celdas de 4 studs y su superficie queda en Y = 2.
+Gameplay.GroundY = 2
 Gameplay.BaseWalkSpeed = 16 -- la mejora Botas suma a esto
 Gameplay.MaxCatchWindow = 0.9 -- tope de la zona verde con todas las mejoras
 
@@ -15,14 +15,14 @@ Gameplay.Zones = {
 		center = Vector3.new(0, 0, 0),
 		minRadius = 18, -- deja libre el punto de aparición del jugador
 		radius = 50,
-		maxCritters = 12,
+		maxCritters = 9,
 		color = Color3.fromRGB(235, 215, 150),
 	},
 	BosqueRuidoso = {
 		center = Vector3.new(0, 0, -200),
 		minRadius = 6,
 		radius = 45,
-		maxCritters = 10,
+		maxCritters = 8,
 		color = Color3.fromRGB(60, 130, 60),
 	},
 	VolcanTimido = {
@@ -124,7 +124,7 @@ Gameplay.RarityGlow = {
 	PocoComun = { light = 0, brightness = 0, sparkles = 0 },
 	Raro = { light = 8, brightness = 3, sparkles = 1 },
 	Epico = { light = 10, brightness = 3, sparkles = 4 },
-	Legendario = { light = 14, brightness = 4, sparkles = 10 },
+	Legendario = { light = 14, brightness = 2, sparkles = 8 },
 }
 
 -- Los bichos se elevan un poco para quedar por encima del suelo de color de cada zona.
