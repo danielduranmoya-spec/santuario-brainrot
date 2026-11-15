@@ -18,15 +18,16 @@ local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Progression = require(Config:WaitForChild("Progression"))
 local CrittersConfig = require(Config:WaitForChild("Critters"))
+local VaultMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("VaultMath"))
 
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 
 export type Profile = {
 	version: number,
 	coins: number,
-	critters: { string }, -- ids de los bichos del santuario, en orden de hueco
+	critters: { string }, -- bichos del santuario en orden de hueco: "id" o "id*multiplicador"
 	upgrades: { [string]: number },
-	zones: { [string]: boolean },
+	maxVault: number, -- última bóveda abierta (1 = solo la primera)
 	starterPackBought: boolean,
 	baits: number,
 	luckUntil: number, -- os.time() hasta el que dura Suerte x2
@@ -86,18 +87,12 @@ local function defaultProfile(): Profile
 	for name in Progression.Upgrades do
 		upgrades[name] = 0
 	end
-	local zones = {}
-	for _, zone in Progression.Zones do
-		if zone.unlockCost == 0 then
-			zones[zone.id] = true
-		end
-	end
 	return {
 		version = PROFILE_VERSION,
 		coins = 0,
 		critters = {},
 		upgrades = upgrades,
-		zones = zones,
+		maxVault = 1,
 		starterPackBought = false,
 		baits = 0,
 		luckUntil = 0,
@@ -117,9 +112,12 @@ local function reconcile(saved: any): Profile
 		profile.coins = math.max(0, math.floor(saved.coins))
 	end
 	if type(saved.critters) == "table" then
-		for _, id in saved.critters do
-			if type(id) == "string" and critterIds[id] then
-				table.insert(profile.critters, id)
+		for _, entry in saved.critters do
+			if type(entry) == "string" then
+				local id, multiplier = VaultMath.decodeCritter(entry)
+				if critterIds[id] then
+					table.insert(profile.critters, VaultMath.encodeCritter(id, math.max(1, multiplier)))
+				end
 			end
 		end
 	end
@@ -131,10 +129,15 @@ local function reconcile(saved: any): Profile
 			end
 		end
 	end
-	if type(saved.zones) == "table" then
-		for _, zone in Progression.Zones do
-			if saved.zones[zone.id] == true then
-				profile.zones[zone.id] = true
+	if type(saved.maxVault) == "number" and saved.maxVault == saved.maxVault then
+		profile.maxVault = math.clamp(math.floor(saved.maxVault), 1, VaultMath.MaxVaults)
+	elseif type(saved.zones) == "table" then
+		-- Migración de la versión con 4 zonas: cada zona abierta (en orden) es una bóveda abierta.
+		for i, vault in Progression.Vaults do
+			if saved.zones[vault.theme] == true then
+				profile.maxVault = i
+			else
+				break
 			end
 		end
 	end
@@ -258,9 +261,7 @@ function Data.Replicate(player: Player)
 	for name, level in profile.upgrades do
 		player:SetAttribute("Upgrade_" .. name, level)
 	end
-	for _, zone in Progression.Zones do
-		player:SetAttribute("Zone_" .. zone.id, profile.zones[zone.id] == true)
-	end
+	player:SetAttribute("MaxVault", profile.maxVault)
 	player:SetAttribute("CritterCount", #profile.critters)
 	player:SetAttribute("StarterPackBought", profile.starterPackBought)
 	player:SetAttribute("Baits", profile.baits)

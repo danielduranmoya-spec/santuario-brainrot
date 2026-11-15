@@ -3,12 +3,25 @@
 
 local Progression = {}
 
--- En este orden: cada zona necesita la anterior desbloqueada.
-Progression.Zones = {
-	{ id = "PlayaRara", name = "Playa Rara", unlockCost = 0 },
-	{ id = "BosqueRuidoso", name = "Bosque Ruidoso", unlockCost = 2_500 },
-	{ id = "VolcanTimido", name = "Volcán Tímido", unlockCost = 40_000 },
-	{ id = "NubePegajosa", name = "Nube Pegajosa", unlockCost = 600_000 },
+-- Bóvedas del campo, en orden: para entrar en una hay que haber abierto la anterior y pagar su precio.
+-- Las 4 primeras tienen nombre, temática y precio fijos; en cada una salen los bichos de su temática.
+Progression.Vaults = {
+	{ theme = "PlayaRara", name = "Playa Rara", unlockCost = 0 },
+	{ theme = "BosqueRuidoso", name = "Bosque Ruidoso", unlockCost = 2_500 },
+	{ theme = "VolcanTimido", name = "Volcán Tímido", unlockCost = 40_000 },
+	{ theme = "NubePegajosa", name = "Nube Pegajosa", unlockCost = 600_000 },
+}
+
+-- A partir de la 5ª, las bóvedas se generan solas sin fin: la temática va rotando (Playa Rara II,
+-- Bosque Ruidoso II...), aparecen bichos de todas las temáticas, cada vez más raros y más valiosos.
+--   precio(n)        = precio de la 4ª × costGrowth^(n-4)
+--   multiplicador(n) = valueGrowth^(n-4)  (los bichos de esa bóveda generan × eso)
+--   suerte(n)        = 1 + luckPerVault × (n-4)  (más peso para las rarezas no comunes)
+Progression.EndlessVaults = {
+	costGrowth = 4,
+	valueGrowth = 3,
+	luckPerVault = 0.6,
+	maxVaults = 60, -- tope de seguridad (en la práctica, sin fin)
 }
 
 -- Cada mejora: coste del nivel n = baseCost * growth^(n-1)

@@ -17,7 +17,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local CatchBar = require(Shared:WaitForChild("CatchBar"))
 local Format = require(Shared:WaitForChild("Format"))
 local Menus = require(script.Parent:WaitForChild("Menus"))
-local ZoneBarriers = require(script.Parent:WaitForChild("ZoneBarriers"))
+local VaultDoors = require(script.Parent:WaitForChild("VaultDoors"))
+local VaultMath = require(Shared:WaitForChild("VaultMath"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local Ambience = require(script.Parent:WaitForChild("Ambience"))
 local CritterAnimator = require(script.Parent:WaitForChild("CritterAnimator"))
@@ -109,10 +110,45 @@ local coinsLabel = newLabel("Monedas", UDim2.fromScale(0.3, 0.07), UDim2.fromSca
 coinsLabel.TextColor3 = COLOR_GOLD
 coinsLabel.Text = "💰 0"
 
-local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.14), gui)
+-- Siguiente bóveda: nombre, precio y barra de progreso con tus monedas.
+local nextFrame = Instance.new("Frame")
+nextFrame.Name = "SiguienteBoveda"
+nextFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+nextFrame.Size = UDim2.fromScale(0.36, 0.045)
+nextFrame.Position = UDim2.fromScale(0.5, 0.117)
+nextFrame.BackgroundColor3 = COLOR_DARK
+nextFrame.BackgroundTransparency = 0.3
+nextFrame.Parent = gui
+addCorner(nextFrame)
+local nextFill = Instance.new("Frame")
+nextFill.Name = "Progreso"
+nextFill.Size = UDim2.fromScale(0, 1)
+nextFill.BackgroundColor3 = Color3.fromRGB(90, 160, 255)
+nextFill.BackgroundTransparency = 0.2
+nextFill.Parent = nextFrame
+addCorner(nextFill)
+local nextText = Instance.new("TextLabel")
+nextText.Size = UDim2.fromScale(1, 1)
+nextText.BackgroundTransparency = 1
+nextText.Font = Enum.Font.GothamBold
+nextText.TextScaled = true
+nextText.TextColor3 = Color3.new(1, 1, 1)
+nextText.TextStrokeTransparency = 0.4
+nextText.ZIndex = 2
+nextText.Parent = nextFrame
+local nextPadding = Instance.new("UIPadding")
+nextPadding.PaddingTop = UDim.new(0.15, 0)
+nextPadding.PaddingBottom = UDim.new(0.15, 0)
+nextPadding.Parent = nextText
+
+-- Día y noche: cuenta atrás arriba a la derecha.
+local dayLabel = newLabel("DiaNoche", UDim2.fromScale(0.2, 0.055), UDim2.fromScale(0.86, 0.06), gui)
+dayLabel.Text = "☀ 5:00"
+
+local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.175), gui)
 hintLabel.Visible = false
 
-local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.25), gui)
+local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.27), gui)
 toastLabel.TextWrapped = true
 toastLabel.Visible = false
 
@@ -225,23 +261,25 @@ local function setupGuide(character: Model)
 	guideBeam = beam
 end
 
-local function updateGuide(carrying: boolean)
+-- El rayo apunta a `part` (o se apaga con nil). Si llevas un bicho, a tu santuario; si ya tienes
+-- monedas para la siguiente bóveda, a su puerta.
+local function updateGuide(part: BasePart?)
 	local beam = guideBeam
 	if not beam then
 		return
 	end
-	if carrying and (guideTarget == nil or guideTarget.Parent == nil) then
-		local base = getOwnPlotBase()
-		if base then
-			local target = Instance.new("Attachment")
-			target.Name = "GuiaDestino"
-			target.Position = Vector3.new(0, 3, 0)
-			target.Parent = base
-			guideTarget = target
+	if part and (guideTarget == nil or guideTarget.Parent ~= part) then
+		if guideTarget then
+			guideTarget:Destroy()
 		end
+		local target = Instance.new("Attachment")
+		target.Name = "GuiaDestino"
+		target.Position = Vector3.new(0, 3, 0)
+		target.Parent = part
+		guideTarget = target
 	end
 	beam.Attachment1 = guideTarget
-	beam.Enabled = carrying and guideTarget ~= nil
+	beam.Enabled = part ~= nil and guideTarget ~= nil
 end
 
 player.CharacterAdded:Connect(setupGuide)
@@ -279,14 +317,26 @@ end
 
 -- ===================== Monedas =====================
 
+local currentCoins = 0
+
+local function coinsText(value: number): string
+	local income = (player:GetAttribute("IncomePerSecond") :: number?) or 0
+	return "💰 " .. Format.number(value) .. (if income > 0 then "  (+" .. Format.number(income) .. "/s)" else "")
+end
+
 local function bindCoins()
 	local leaderstats = player:WaitForChild("leaderstats")
 	local coins = leaderstats:WaitForChild("Monedas") :: IntValue
 	local last = coins.Value
-	coinsLabel.Text = "💰 " .. Format.number(coins.Value)
+	currentCoins = coins.Value
+	coinsLabel.Text = coinsText(coins.Value)
+	player:GetAttributeChangedSignal("IncomePerSecond"):Connect(function()
+		coinsLabel.Text = coinsText(coins.Value)
+	end)
 	coins.Changed:Connect(function()
 		local value = coins.Value
-		coinsLabel.Text = "💰 " .. Format.number(value)
+		currentCoins = value
+		coinsLabel.Text = coinsText(value)
 		if value > last then
 			hasCollected = true
 			coinsLabel.Size = UDim2.fromScale(0.33, 0.08)
@@ -340,7 +390,7 @@ Menus.OnLocalNotice = function(text: string)
 	showToast(text)
 end
 Menus.Start()
-ZoneBarriers.Start()
+VaultDoors.Start()
 Ambience.Start()
 CritterAnimator.Start()
 
@@ -384,15 +434,47 @@ RunService.RenderStepped:Connect(function()
 	releaseButton.Visible = carrying and current == nil
 	-- Sin avisos "Atrapar" mientras juegas la barra o llevas un bicho (solo en este cliente).
 	ProximityPromptService.Enabled = current == nil and not carrying
-	updateGuide(carrying)
+
+	-- Siguiente bóveda y su precio.
+	local maxVault = (player:GetAttribute("MaxVault") :: number?) or 1
+	local nextVault = maxVault + 1
+	local nextCost = VaultMath.cost(nextVault)
+	local canAfford = currentCoins >= nextCost
+	nextText.Text = "🔒 Bóveda " .. nextVault .. " · " .. VaultMath.name(nextVault) .. ": " .. Format.number(currentCoins) .. " / " .. Format.number(nextCost) .. " 💰"
+	nextFill.Size = UDim2.fromScale(math.clamp(currentCoins / math.max(nextCost, 1), 0, 1), 1)
+	nextFill.BackgroundColor3 = if canAfford then COLOR_GOOD else Color3.fromRGB(90, 160, 255)
+
+	-- Rayo guía: al santuario si llevas un bicho; a la puerta si ya puedes pagarla.
+	if carrying then
+		updateGuide(getOwnPlotBase())
+	elseif canAfford and hasCaught then
+		updateGuide(VaultDoors.NextPanel())
+	else
+		updateGuide(nil)
+	end
+
+	-- Día y noche.
+	local night = ReplicatedStorage:GetAttribute("IsNight") == true
+	local endsAt = (ReplicatedStorage:GetAttribute("PhaseEndsAt") :: number?) or 0
+	local left = math.max(0, math.ceil(endsAt - Workspace:GetServerTimeNow()))
+	local clock = string.format("%d:%02d", left // 60, left % 60)
+	local warning = (ReplicatedStorage:GetAttribute("NightWarningSeconds") :: number?) or 0
+	dayLabel.Text = (if night then "🌙 Noche " else "☀ Día ") .. clock
+	dayLabel.TextColor3 = if night then Color3.fromRGB(170, 190, 255) elseif left <= warning then COLOR_BAD else Color3.fromRGB(255, 230, 120)
 
 	local hint: string? = nil
-	if carrying then
+	if night then
+		hint = "🌙 Los bichos duermen: espera a que amanezca (" .. clock .. ")"
+	elseif carrying then
 		hint = "🏠 Lleva el bicho a tu santuario (sigue el rayo amarillo)"
 	elseif not hasCaught then
 		hint = "👉 Acércate a un bicho y pulsa Atrapar"
 	elseif not hasCollected then
-		hint = "💰 Pisa el cofre dorado de tu santuario para cobrar"
+		hint = "💰 Pisa la plataforma dorada de tu santuario para cobrar"
+	elseif canAfford then
+		hint = "🔓 ¡Ya puedes abrir la bóveda " .. nextVault .. "! Sigue el rayo amarillo"
+	elseif left <= warning then
+		hint = "⚠ ¡Anochece en " .. clock .. "! Date prisa"
 	end
 	hintLabel.Visible = hint ~= nil and current == nil
 	hintLabel.Text = hint or ""

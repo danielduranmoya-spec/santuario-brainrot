@@ -100,9 +100,32 @@ function CritterAnimator.Start()
 		for root, entry in tracked do
 			if (root.Position - cameraPosition).Magnitude <= A.maxDistance then
 				local size = root.Size.Y
-				local t = now * A.speed + entry.phase
-				local bob = math.sin(t) * A.bobHeight * size * (if entry.flying then 2.5 else 1)
-				local blinking = now >= entry.nextBlink
+				-- Dormido (de noche): respira despacio y con los ojos cerrados.
+				local sleeping = root:GetAttribute("Sleeping") == true
+				local zz = root:FindFirstChild("Zz")
+				if sleeping and not zz then
+					local gui = Instance.new("BillboardGui")
+					gui.Name = "Zz"
+					gui.Size = UDim2.new(2.5, 0, 1.5, 0)
+					-- A un lado del bicho, para no taparse con su etiqueta de nombre.
+					gui.StudsOffsetWorldSpace = Vector3.new(size * 0.7 + 1.2, size * 0.2, 0)
+					gui.LightInfluence = 0
+					gui.Parent = root
+					local label = Instance.new("TextLabel")
+					label.Size = UDim2.fromScale(1, 1)
+					label.BackgroundTransparency = 1
+					label.Font = Enum.Font.GothamBlack
+					label.TextScaled = true
+					label.TextColor3 = Color3.fromRGB(200, 220, 255)
+					label.TextStrokeTransparency = 0.3
+					label.Text = "Zz"
+					label.Parent = gui
+				elseif not sleeping and zz then
+					zz:Destroy()
+				end
+				local t = now * (if sleeping then A.speed * 0.3 else A.speed) + entry.phase
+				local bob = math.sin(t) * A.bobHeight * size * (if entry.flying and not sleeping then 2.5 else 1)
+				local blinking = sleeping or now >= entry.nextBlink
 				if now >= entry.nextBlink + A.blinkSeconds then
 					entry.nextBlink = now + rng:NextNumber(A.blinkEverySeconds * 0.5, A.blinkEverySeconds * 1.5)
 				end

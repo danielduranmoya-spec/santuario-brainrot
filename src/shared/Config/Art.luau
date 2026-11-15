@@ -58,32 +58,63 @@ Art.animation = {
 	flying = { tostada_voladora = true, nube_grunona = true }, -- se balancean más
 }
 
--- Terreno del mapa (WorldArt). Los radios se miden desde el centro de la Playa.
+-- Terreno del campo (WorldArt).
 Art.terrain = {
-	islandRadius = 300, -- hierba jugable
-	shoreWidth = 24, -- arena entre la hierba y el mar
-	islandDepth = 24, -- grosor de la isla bajo el suelo
-	seaRadius = 520, -- hasta dónde llega el mar
-	seaDepth = 30,
-	waterLevel = -2, -- superficie del mar (el suelo de la isla está en 0)
-	mountainRadius = 318, -- anillo de montañas en el borde
-	mountainCount = 30,
-	mountainSize = { min = 26, max = 40 },
-	waterColor = Color3.fromRGB(30, 140, 200),
+	depth = 24, -- grosor del suelo bajo la superficie
+	sideHillOffset = 22, -- colinas a cada lado, por fuera de los muros
+	hillSpacing = 22,
+	hillSize = { min = 18, max = 28 },
 	surfaceOffset = 2, -- el terreno se rellena hasta GroundY - 2 y su superficie visible queda en GroundY
+	-- Altura de la hierba animada (0,1 = muy corta, 1 = alta). Bajada a petición del usuario.
+	grassLength = 0.25,
+	waterColor = Color3.fromRGB(30, 140, 200),
 }
 
--- Límite infranqueable: muro invisible alrededor del mapa jugable (y techo).
+-- Límite infranqueable: muros invisibles alrededor del campo (y techo).
 Art.boundary = {
-	radius = 296, -- por dentro de las montañas
-	segments = 48,
 	height = 400,
 	thickness = 6,
-	ceilingHeight = 260,
-	-- Si un jugador cae por debajo de esta altura o sale de este radio, vuelve a su santuario.
-	respawnBelowY = -8,
-	respawnBeyondRadius = 305,
+	segmentLength = 500, -- largo de cada tramo de muro lateral
+	ceilingHeight = 120, -- techo invisible sobre el suelo
+	-- Si un jugador cae por debajo del suelo o sale del campo, vuelve a su santuario.
+	respawnBelowY = -10,
+	respawnMargin = 6,
 	checkSeconds = 0.5,
+}
+
+-- Color de cada temática (puertas, dinteles).
+Art.themeColors = {
+	PlayaRara = Color3.fromRGB(255, 190, 80),
+	BosqueRuidoso = Color3.fromRGB(70, 170, 80),
+	VolcanTimido = Color3.fromRGB(230, 90, 50),
+	NubePegajosa = Color3.fromRGB(190, 160, 255),
+}
+
+-- Plaza de los santuarios.
+Art.hub = {
+	avenueWidth = 18,
+	trees = 10,
+	flowers = 24,
+}
+
+-- Decorado por bóveda (por temática). Pocas piezas: van muchas bóvedas seguidas.
+Art.vaultDecor = {
+	palms = 5,
+	umbrellas = 1,
+	trees = 7,
+	bushes = 3,
+	mushrooms = 2,
+	lavaRocks = 5,
+	clouds = 4,
+	crystals = 3,
+	rocks = 4,
+}
+
+-- Noche (el cliente tiñe la pantalla; el servidor oscurece el cielo).
+Art.night = {
+	tint = Color3.fromRGB(150, 170, 255),
+	brightness = 0.6,
+	ambient = Color3.fromRGB(60, 70, 110),
 }
 
 -- Material del suelo de cada zona (Terrain).

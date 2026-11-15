@@ -9,45 +9,27 @@ Gameplay.GroundY = 2
 Gameplay.BaseWalkSpeed = 16 -- la mejora Botas suma a esto
 Gameplay.MaxCatchWindow = 0.9 -- tope de la zona verde con todas las mejoras
 
--- Zonas del mapa (sus costes están en Progression.Zones). La Playa Rara es el centro.
-Gameplay.Zones = {
-	PlayaRara = {
-		center = Vector3.new(0, 0, 0),
-		minRadius = 18, -- deja libre el punto de aparición del jugador
-		radius = 50,
-		maxCritters = 9,
-		color = Color3.fromRGB(235, 215, 150),
-	},
-	BosqueRuidoso = {
-		center = Vector3.new(0, 0, -200),
-		minRadius = 6,
-		radius = 45,
-		maxCritters = 8,
-		color = Color3.fromRGB(60, 130, 60),
-	},
-	VolcanTimido = {
-		-- A 200 studs en diagonal, en el hueco entre dos santuarios (así el camino no los cruza).
-		center = Vector3.new(173, 0, -100),
-		minRadius = 6,
-		radius = 45,
-		maxCritters = 8,
-		color = Color3.fromRGB(150, 60, 40),
-	},
-	NubePegajosa = {
-		center = Vector3.new(0, 0, 200),
-		minRadius = 6,
-		radius = 45,
-		maxCritters = 6,
-		color = Color3.fromRGB(215, 220, 255),
-	},
+-- Mapa: un campo recto y largo. Al principio (Z positiva) está la plaza con los santuarios;
+-- desde startZ hacia -Z vienen las bóvedas, una detrás de otra, todas del mismo ancho.
+-- Cada bóveda se paga para entrar (precios en Progression.Vaults / Progression.EndlessVaults).
+Gameplay.Field = {
+	width = 160, -- ancho del campo (plaza y bóvedas), de -80 a 80 en X
+	startZ = -30, -- donde termina la plaza y empieza la bóveda 1
+	hubLength = 200, -- largo de la plaza de santuarios (de startZ a startZ + hubLength)
+	spawn = Vector3.new(0, 0, 60), -- punto de aparición (en la plaza, entre los santuarios)
+	vaultLength = 100, -- largo de cada bóveda
+	initialVaults = 6, -- bóvedas construidas al arrancar el servidor
+	aheadVaults = 3, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
+	crittersPerVault = 6, -- bichos salvajes a la vez en cada bóveda
+	edgeMargin = 10, -- los bichos no aparecen pegados a muros ni puertas
 }
 
--- Barrera de las zonas bloqueadas (cada cliente la vuelve sólida solo para sí mismo).
-Gameplay.ZoneBarrier = {
-	height = 24,
-	transparency = 0.6,
-	gateDistance = 4, -- studs por fuera de la barrera donde está la puerta
-	promptDistance = 12,
+-- Puertas entre bóvedas (cada cliente la vuelve sólida solo para sí mismo si no la ha pagado).
+Gameplay.VaultDoor = {
+	height = 26,
+	thickness = 2,
+	transparency = 0.55,
+	promptDistance = 14,
 	promptHoldSeconds = 0.5,
 }
 
@@ -58,8 +40,7 @@ Gameplay.Spawning = {
 	wanderChance = 0.6, -- probabilidad de que un bicho se mueva en cada paso
 	wanderDistance = 8,
 	wanderSpeed = 5, -- studs/s
-	tutorialZone = "PlayaRara",
-	tutorialDistance = 12, -- el primer bicho aparece justo delante del jugador
+	tutorialDistance = 12, -- el primer bicho aparece justo delante del jugador (en la plaza)
 	tutorialDelaySeconds = 1,
 	labelMaxDistance = 45, -- etiquetas de bichos solo de cerca (menos amontonadas)
 }
@@ -87,14 +68,16 @@ Gameplay.Catching = {
 }
 
 Gameplay.Sanctuary = {
-	plotCount = 6, -- un santuario por jugador, hasta 6 jugadores
-	ringRadius = 75, -- los santuarios forman un anillo alrededor de la playa
-	plotSize = 28,
+	plotCount = 6, -- un santuario por jugador, hasta 6 jugadores (3 a cada lado de la plaza)
+	sideX = 54, -- distancia del centro de cada santuario a la avenida central
+	firstZ = 0, -- Z del primer par de santuarios (el más cercano a las bóvedas)
+	spacingZ = 58, -- distancia entre santuarios del mismo lado
+	plotSize = 46,
 	depositMargin = 2, -- studs fuera de la parcela que aún cuentan para soltar el bicho
-	slotColumns = 5,
-	slotSpacing = 5,
-	slotStartZ = -3,
-	collectRadius = 4, -- distancia al cofre para cobrar (el Imán la amplía)
+	slotColumns = 4,
+	slotSpacing = 8.5,
+	slotStartZ = -5, -- primera fila de pedestales (el frente de la parcela está en -plotSize/2)
+	collectRadius = 5, -- distancia al cofre para cobrar (el Imán la amplía)
 	collectCheckSeconds = 0.2,
 	coinTickSeconds = 1,
 	labelMaxDistance = 120,

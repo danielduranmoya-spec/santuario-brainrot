@@ -1,7 +1,8 @@
 --!strict
--- Límite infranqueable del mapa:
---   * un anillo de muros invisibles y muy altos alrededor de la zona jugable (por dentro de las
---     montañas del borde) y un techo invisible, para que ni saltando ni con Botas al máximo se pueda salir;
+-- Límite infranqueable del campo (un rectángulo largo):
+--   * muros invisibles y muy altos a los dos lados, detrás de la plaza y al final de la última bóveda
+--     construida (se mueve cuando se construyen más), y un techo invisible, para que ni saltando ni con
+--     Botas al máximo se pueda salir;
 --   * por si acaso (un bug de física, un exploit...), si un jugador cae por debajo del suelo o aparece
 --     fuera del límite, vuelve delante de su santuario.
 
@@ -17,52 +18,65 @@ local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 
 local B = Art.boundary
-local CENTER = Gameplay.Zones.PlayaRara.center
+local F = Gameplay.Field
+local HALF = F.width / 2
+local BACK_Z = F.startZ + F.hubLength -- detrás de la plaza
 
 local Boundary = {}
 
-local function invisibleWall(name: string, size: Vector3, cframe: CFrame, parent: Instance)
+local model: Model
+local endWall: Part
+local builtUntilZ = BACK_Z -- hasta dónde llegan ya los muros laterales y el techo
+local fieldEndZ = F.startZ
+
+local function invisibleWall(name: string, size: Vector3, position: Vector3): Part
 	local wall = Instance.new("Part")
 	wall.Name = name
 	wall.Size = size
-	wall.CFrame = cframe
+	wall.Position = position
 	wall.Anchored = true
 	wall.CanCollide = true
 	wall.CanQuery = false
 	wall.CanTouch = false
 	wall.CastShadow = false
 	wall.Transparency = 1
-	wall.Parent = parent
+	wall.Parent = model
+	return wall
 end
 
-local function build()
-	local model = Instance.new("Model")
-	model.Name = "Limites"
-	-- Que el muro esté siempre cargado en todos los clientes (con StreamingEnabled).
-	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+local function wallY(): number
+	return Gameplay.GroundY - 20 + B.height / 2
+end
 
-	-- Anillo de muros: cada tramo cubre su arco con un poco de solape para que no queden huecos.
-	local arc = 2 * math.pi * B.radius / B.segments
-	for i = 1, B.segments do
-		local angle = (i - 0.5) / B.segments * math.pi * 2
-		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		local position = CENTER + direction * (B.radius + B.thickness / 2) + Vector3.new(0, B.height / 2 - 20, 0)
-		invisibleWall("Muro", Vector3.new(arc * 1.15, B.height, B.thickness), CFrame.lookAt(position, position + direction), model)
+-- Añade muros laterales y techo desde builtUntilZ hasta `toZ` (hacia -Z), en tramos.
+local function extendSides(toZ: number)
+	while builtUntilZ > toZ do
+		local length = math.min(B.segmentLength, builtUntilZ - toZ)
+		local middleZ = builtUntilZ - length / 2
+		for _, side in { -1, 1 } do
+			invisibleWall("Lateral", Vector3.new(B.thickness, B.height, length + 2), Vector3.new(side * (HALF + B.thickness / 2), wallY(), middleZ))
+		end
+		invisibleWall("Techo", Vector3.new(F.width + B.thickness * 2, B.thickness, length + 2), Vector3.new(0, Gameplay.GroundY + B.ceilingHeight, middleZ))
+		builtUntilZ -= length
 	end
+end
 
-	-- Techo invisible.
-	invisibleWall(
-		"Techo",
-		Vector3.new(B.thickness, (B.radius + B.thickness) * 2, (B.radius + B.thickness) * 2),
-		CFrame.new(CENTER + Vector3.new(0, B.ceilingHeight, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		model
-	)
-	model.Parent = Workspace
+-- Coloca el muro del final del campo (lo llama Vaults al construir más bóvedas).
+function Boundary.SetFieldEnd(z: number)
+	fieldEndZ = z
+	extendSides(z - B.thickness)
+	endWall.Position = Vector3.new(0, wallY(), z - B.thickness / 2)
+end
+
+local function isOutside(position: Vector3): boolean
+	return position.Y < Gameplay.GroundY + B.respawnBelowY
+		or math.abs(position.X) > HALF + B.respawnMargin
+		or position.Z > BACK_Z + B.respawnMargin
+		or position.Z < fieldEndZ - B.respawnMargin
 end
 
 local function rescue(player: Player, root: BasePart)
-	local target = Plots.GetSafeCFrame(player)
-		or CFrame.new(CENTER + Vector3.new(0, Gameplay.GroundY + 4, 0))
+	local target = Plots.GetSafeCFrame(player) or CFrame.new(F.spawn + Vector3.new(0, Gameplay.GroundY + 4, 0))
 	root.AssemblyLinearVelocity = Vector3.zero
 	if player.Character then
 		player.Character:PivotTo(target)
@@ -76,19 +90,23 @@ local function watchLoop()
 		for _, player in Players:GetPlayers() do
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
-			if root and root:IsA("BasePart") then
-				local position = root.Position
-				local horizontal = Vector3.new(position.X - CENTER.X, 0, position.Z - CENTER.Z).Magnitude
-				if position.Y < B.respawnBelowY or horizontal > B.respawnBeyondRadius then
-					rescue(player, root)
-				end
+			if root and root:IsA("BasePart") and isOutside(root.Position) then
+				rescue(player, root)
 			end
 		end
 	end
 end
 
 function Boundary.Start()
-	build()
+	model = Instance.new("Model")
+	model.Name = "Limites"
+	-- Que los muros estén siempre cargados en todos los clientes (con StreamingEnabled).
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+	model.Parent = Workspace
+
+	invisibleWall("Fondo", Vector3.new(F.width + B.thickness * 2, B.height, B.thickness), Vector3.new(0, wallY(), BACK_Z + B.thickness / 2))
+	endWall = invisibleWall("Final", Vector3.new(F.width + B.thickness * 2, B.height, B.thickness), Vector3.new(0, wallY(), F.startZ))
+	extendSides(F.startZ)
 	task.spawn(watchLoop)
 end
 

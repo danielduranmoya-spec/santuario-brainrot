@@ -1,6 +1,7 @@
 --!strict
--- Atmósfera por zona: al entrar en una zona, la niebla y el tono de color cambian suavemente
--- (playa azulada, bosque verde, volcán anaranjado, nube rosada). Solo en este cliente.
+-- Atmósfera: al entrar en una bóveda, la niebla y el tono de color cambian suavemente según su
+-- temática (playa azulada, bosque verde, volcán anaranjado, nube rosada). De noche, todo se tiñe de
+-- azul oscuro. Solo en este cliente.
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
@@ -8,26 +9,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = Shared:WaitForChild("Config")
 local Art = require(Config:WaitForChild("Art"))
-local Gameplay = require(Config:WaitForChild("Gameplay"))
+local VaultMath = require(Shared:WaitForChild("VaultMath"))
 
 local CHECK_SECONDS = 0.5
 
 local Ambience = {}
 
-local function zoneAt(position: Vector3): string
-	for zoneId, area in Gameplay.Zones do
-		local offset = Vector3.new(position.X - area.center.X, 0, position.Z - area.center.Z)
-		if offset.Magnitude <= area.radius then
-			return zoneId
-		end
-	end
-	return "PlayaRara" -- fuera de las zonas (santuarios, caminos) se usa la de la playa
+local function themeAt(position: Vector3): string
+	local vault = VaultMath.vaultAt(position)
+	return if vault then VaultMath.theme(vault) else "PlayaRara" -- la plaza usa la de la playa
 end
 
-local function apply(zoneId: string)
-	local settings = Art.ambience[zoneId]
+local function apply(theme: string, night: boolean)
+	local settings = Art.ambience[theme]
 	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
 	local correction = Lighting:FindFirstChild("ColorZona")
 	local info = TweenInfo.new(Art.ambienceTweenSeconds)
@@ -40,7 +37,8 @@ local function apply(zoneId: string)
 		}):Play()
 	end
 	if settings and correction and correction:IsA("ColorCorrectionEffect") then
-		TweenService:Create(correction, info, { TintColor = settings.tint }):Play()
+		local tint = if night then settings.tint:Lerp(Art.night.tint, 0.85) else settings.tint
+		TweenService:Create(correction, info, { TintColor = tint }):Play()
 	end
 end
 
@@ -50,11 +48,12 @@ function Ambience.Start()
 		while true do
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local night = ReplicatedStorage:GetAttribute("IsNight") == true
 			if root and root:IsA("BasePart") then
-				local zone = zoneAt(root.Position)
-				if zone ~= current then
-					current = zone
-					apply(zone)
+				local key = themeAt(root.Position) .. (if night then "-noche" else "")
+				if key ~= current then
+					current = key
+					apply(themeAt(root.Position), night)
 				end
 			end
 			task.wait(CHECK_SECONDS)
