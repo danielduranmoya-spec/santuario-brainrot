@@ -19,6 +19,7 @@ local Remotes = {
 	StartMinigame = newEvent("StartMinigame"), -- (datos de la barra)
 	CatchResult = newEvent("CatchResult"), -- (acierto: boolean, mensaje: string)
 	Notify = newEvent("Notify"), -- (mensaje: string)
+	Effect = newEvent("Effect"), -- (tipo: string, posición: Vector3?, dato: any) solo efectos visuales/sonido
 	-- cliente -> servidor
 	AttemptCatch = newEvent("AttemptCatch"), -- (momento en tiempo de servidor: number)
 	ReleaseCarried = newEvent("ReleaseCarried"), -- ()

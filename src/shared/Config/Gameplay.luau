@@ -26,7 +26,8 @@ Gameplay.Zones = {
 		color = Color3.fromRGB(60, 130, 60),
 	},
 	VolcanTimido = {
-		center = Vector3.new(200, 0, 0),
+		-- A 200 studs en diagonal, en el hueco entre dos santuarios (así el camino no los cruza).
+		center = Vector3.new(173, 0, -100),
 		minRadius = 6,
 		radius = 45,
 		maxCritters = 8,
@@ -60,7 +61,7 @@ Gameplay.Spawning = {
 	tutorialZone = "PlayaRara",
 	tutorialDistance = 12, -- el primer bicho aparece justo delante del jugador
 	tutorialDelaySeconds = 1,
-	labelMaxDistance = 90,
+	labelMaxDistance = 45, -- etiquetas de bichos solo de cerca (menos amontonadas)
 }
 
 -- Suerte x2 (producto de pago): mientras dure, aparece cerca del jugador un bicho reservado
@@ -117,7 +118,28 @@ Gameplay.Menus = {
 	actionCooldownSeconds = 0.3,
 }
 
--- Diámetro (studs) de la bola provisional de cada rareza.
+-- Brillo de cada rareza: alcance de la luz (0 = sin luz) y chispas por segundo (0 = sin chispas).
+Gameplay.RarityGlow = {
+	Comun = { light = 0, brightness = 0, sparkles = 0 },
+	PocoComun = { light = 0, brightness = 0, sparkles = 0 },
+	Raro = { light = 8, brightness = 3, sparkles = 1 },
+	Epico = { light = 10, brightness = 3, sparkles = 4 },
+	Legendario = { light = 14, brightness = 4, sparkles = 10 },
+}
+
+-- Los bichos se elevan un poco para quedar por encima del suelo de color de cada zona.
+Gameplay.CritterLift = 0.3
+
+-- Partículas al atrapar según rareza (más cuanto más raro). flash = destello de luz.
+Gameplay.CatchBurst = {
+	Comun = { particles = 12, flash = false },
+	PocoComun = { particles = 18, flash = false },
+	Raro = { particles = 28, flash = true },
+	Epico = { particles = 40, flash = true },
+	Legendario = { particles = 60, flash = true },
+}
+
+-- Tamaño (studs) de cada rareza.
 Gameplay.CritterSizes = {
 	Comun = 2.5,
 	PocoComun = 3,

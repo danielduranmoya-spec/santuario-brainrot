@@ -64,6 +64,8 @@ local function onBuyUpgrade(player: Player, name: unknown)
 	elseif name == "Santuario" then
 		Plots.Refresh(player)
 	end
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	Remotes.Effect:FireClient(player, "compra", if root and root:IsA("BasePart") then root.Position else nil)
 	Remotes.Notify:FireClient(player, "⬆ " .. def.title .. " nivel " .. (level + 1) .. ": " .. UpgradeMath.effectText(name, level + 1))
 end
 

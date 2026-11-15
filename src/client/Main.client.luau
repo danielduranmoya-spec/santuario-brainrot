@@ -18,6 +18,8 @@ local CatchBar = require(Shared:WaitForChild("CatchBar"))
 local Format = require(Shared:WaitForChild("Format"))
 local Menus = require(script.Parent:WaitForChild("Menus"))
 local ZoneBarriers = require(script.Parent:WaitForChild("ZoneBarriers"))
+local Effects = require(script.Parent:WaitForChild("Effects"))
+local Ambience = require(script.Parent:WaitForChild("Ambience"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StartMinigame = remotes:WaitForChild("StartMinigame") :: RemoteEvent
@@ -162,6 +164,7 @@ local function showToast(text: string, color: Color3?)
 	toastLabel.Text = text
 	toastLabel.TextColor3 = color or Color3.new(1, 1, 1)
 	toastLabel.Visible = true
+	Effects.Pop(toastLabel)
 	-- Los avisos largos se quedan más tiempo en pantalla.
 	task.delay(3 + #text / 25, function()
 		if toastId == myId then
@@ -311,6 +314,9 @@ StartMinigame.OnClientEvent:Connect(function(data: MinigameData)
 	barTitle.TextColor3 = data.color
 	bar.Visible = true
 	barTitle.Visible = true
+	Effects.Play("barra_inicio")
+	Effects.Pop(bar)
+	Effects.Pop(barTitle)
 end)
 
 CatchResult.OnClientEvent:Connect(function(success: boolean, message: string)
@@ -325,12 +331,16 @@ Notify.OnClientEvent:Connect(function(message: string)
 	showToast(message)
 end)
 
--- Menús de MEJORAS/TIENDA y barreras de zona.
+-- Efectos y sonido, menús de MEJORAS/TIENDA, barreras de zona y atmósfera por zona.
+Effects.Start()
+Effects.BindButton(nowButton)
+Effects.BindButton(releaseButton)
 Menus.OnLocalNotice = function(text: string)
 	showToast(text)
 end
 Menus.Start()
 ZoneBarriers.Start()
+Ambience.Start()
 
 local function tryCatch()
 	if minigame and not waitingResult then
