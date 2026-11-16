@@ -125,6 +125,8 @@ local function reconcile(saved: any): Profile
 		for _, entry in saved.critters do
 			if type(entry) == "string" then
 				local id, multiplier = VaultMath.decodeCritter(entry)
+				-- Bichos del catálogo anterior: se cambian por su sustituto de la misma rareza.
+				id = CrittersConfig.Replaced[id] or id
 				if critterIds[id] then
 					table.insert(profile.critters, VaultMath.encodeCritter(id, math.max(1, multiplier)))
 				end

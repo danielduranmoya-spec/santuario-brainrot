@@ -47,7 +47,7 @@ Gameplay.Spawning = {
 }
 
 -- Suerte x2 (producto de pago): mientras dure, aparece cerca del jugador un bicho reservado
--- para él, con las rarezas no comunes multiplicadas.
+-- para él, con todas las rarezas menos la más común de esa bóveda multiplicadas.
 Gameplay.Luck = {
 	personalSpawnSeconds = 20,
 	rarityMultiplier = 2,
@@ -117,6 +117,8 @@ Gameplay.RarityGlow = {
 	Raro = { light = 8, brightness = 3, sparkles = 1 },
 	Epico = { light = 10, brightness = 3, sparkles = 4 },
 	Legendario = { light = 14, brightness = 2, sparkles = 8 },
+	Mitico = { light = 16, brightness = 2.5, sparkles = 12 },
+	Secreto = { light = 18, brightness = 3, sparkles = 16 },
 }
 
 -- Los bichos se elevan un poco para quedar por encima del suelo de color de cada zona.
@@ -131,6 +133,8 @@ Gameplay.CatchBurst = {
 	Raro = { particles = 28, confetti = 40, flash = true, column = true },
 	Epico = { particles = 40, confetti = 55, flash = true, column = true },
 	Legendario = { particles = 60, confetti = 80, flash = true, column = true },
+	Mitico = { particles = 70, confetti = 90, flash = true, column = true },
+	Secreto = { particles = 80, confetti = 100, flash = true, column = true },
 }
 
 -- Tamaño (studs) de cada rareza: cuanto más raro, más grande.
@@ -140,6 +144,8 @@ Gameplay.CritterSizes = {
 	Raro = 4.8,
 	Epico = 6,
 	Legendario = 7.5,
+	Mitico = 8, -- no más de slotSpacing (8,5): si no, se pisan en los pedestales
+	Secreto = 8.5,
 }
 
 -- Movimiento de cada rareza: multiplica la velocidad y la distancia de paseo (Spawning).
@@ -151,6 +157,8 @@ Gameplay.RarityMotion = {
 	Raro = { speed = 1.7, distance = 1.4 },
 	Epico = { speed = 2.2, distance = 1.7 },
 	Legendario = { speed = 2.8, distance = 2 },
+	Mitico = { speed = 3.4, distance = 2.3 },
+	Secreto = { speed = 4, distance = 2.6 },
 }
 
 return Gameplay

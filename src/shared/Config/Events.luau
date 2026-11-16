@@ -8,7 +8,7 @@ local Events = {}
 Events.ServerLegendary = {
 	intervalSeconds = 8 * 60,
 	warningSeconds = 15,
-	critterId = "nube_grunona",
+	critterId = "lobo_tormenta",
 	lifetimeSeconds = 90, -- si nadie lo atrapa en este tiempo, se va volando
 	firstDelaySeconds = 4 * 60, -- el primero del servidor sale antes, para que los nuevos lo vean pronto
 }
@@ -21,7 +21,7 @@ Events.LluviaDeBichos = {
 	hourUTC = 17, -- 18:00 en Madrid en invierno
 	durationMinutes = 30,
 	spawnMultiplier = 3,
-	exclusiveCritterId = "rana_paraguas",
+	exclusiveCritterId = "ajolote_chubasquero",
 	exclusiveChance = 0.12, -- probabilidad de que cada bicho que aparece sea el exclusivo
 }
 
@@ -36,7 +36,7 @@ Events.Bait = {
 	minVictimCritters = 3, -- no se puede poner cebo a quien tiene menos bichos (protege a los nuevos)
 	promptHoldSeconds = 1,
 	promptDistance = 10,
-	neverSteal = { Legendario = true }, -- rarezas que nunca se escapan
+	neverSteal = { Legendario = true, Mitico = true, Secreto = true }, -- rarezas que nunca se escapan
 }
 
 -- Ciclo de día y noche: de noche los bichos duermen y no se puede atrapar nada.

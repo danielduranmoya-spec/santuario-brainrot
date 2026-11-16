@@ -4,25 +4,32 @@
 local Progression = {}
 
 -- Bóvedas del campo, en orden: para entrar en una hay que haber abierto la anterior y pagar su precio.
--- Las 4 primeras tienen nombre, temática y precio fijos; en cada una salen los bichos de su temática.
+-- Las 9 primeras tienen nombre, temática y precio fijos. Qué rarezas salen en cada una está en
+-- Config/Critters.VaultChances, y qué bichos, en el campo `vault` de cada bicho.
 Progression.Vaults = {
 	{ theme = "PlayaRara", name = "Playa Rara", unlockCost = 0 },
 	-- Ritmo simulado (jugador medio, ver design/Economia.md): bóveda 2 hacia el minuto 5 y la 3 hacia
-	-- el minuto 12, dentro de la primera sesión. Antes eran 2.500 / 40.000 / 600.000 (minutos 11 y 35).
+	-- el minuto 12, dentro de la primera sesión.
 	{ theme = "BosqueRuidoso", name = "Bosque Ruidoso", unlockCost = 1_000 },
 	{ theme = "VolcanTimido", name = "Volcán Tímido", unlockCost = 18_000 },
 	{ theme = "NubePegajosa", name = "Nube Pegajosa", unlockCost = 300_000 },
+	-- Desde aquí cada bóveda cuesta x4 la anterior y sus bichos generan x3 (ver EndlessVaults).
+	{ theme = "PantanoCristal", name = "Pantano de Cristal", unlockCost = 1_200_000 },
+	{ theme = "RelojeriaAbandonada", name = "Relojería Abandonada", unlockCost = 4_800_000 },
+	{ theme = "ValleTitanes", name = "Valle de los Titanes", unlockCost = 19_000_000 },
+	{ theme = "ObservatorioAstral", name = "Observatorio Astral", unlockCost = 77_000_000 },
+	{ theme = "SantuarioEclipse", name = "Santuario del Eclipse", unlockCost = 310_000_000 },
 }
 
--- A partir de la 5ª, las bóvedas se generan solas sin fin: la temática va rotando (Playa Rara II,
--- Bosque Ruidoso II...), aparecen bichos de todas las temáticas, cada vez más raros y más valiosos.
---   precio(n)        = precio de la 4ª × costGrowth^(n-4)
---   multiplicador(n) = valueGrowth^(n-4)  (los bichos de esa bóveda generan × eso)
---   suerte(n)        = 1 + luckPerVault × (n-4)  (más peso para las rarezas no comunes)
+-- Multiplicador de ingresos y bóvedas sin fin a partir de la 10ª (la temática va rotando: Playa
+-- Rara II, Bosque Ruidoso II...; las rarezas se quedan con los porcentajes de la bóveda 9).
+--   multiplicador(n) = valueGrowth^(n - valueFromVault + 1)  desde la bóveda valueFromVault
+--                      (bóveda 5 → x3, bóveda 6 → x9...): los bichos atrapados ahí generan × eso
+--   precio(n)        = precio de la 9ª × costGrowth^(n-9)  para las bóvedas sin nombre
 Progression.EndlessVaults = {
 	costGrowth = 4,
 	valueGrowth = 3,
-	luckPerVault = 0.6,
+	valueFromVault = 5,
 	maxVaults = 60, -- tope de seguridad (en la práctica, sin fin)
 }
 

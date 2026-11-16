@@ -4,7 +4,9 @@
 --     flores y farolas.
 --   * Cada bóveda (BuildVault, la llama Vaults): suelo de Terrain con el material de su temática,
 --     colinas a los lados por fuera de los muros y decorado de su temática (palmeras y sombrillas,
---     árboles y setas, rocas de lava y un pequeño volcán, nubes, cristales y arcoíris).
+--     árboles y setas, rocas de lava y un pequeño volcán, nubes, cristales y arcoíris; pantano con
+--     estanques y cristales, engranajes y relojes, restos de titanes, observatorio y astros, y
+--     obeliscos bajo un eclipse).
 --   * Iluminación, nubes del cielo, post-procesado moderado y hierba corta.
 -- Todo es decorado: la lógica está en Vaults, Plots y CritterSpawner. Números en Config/Art.
 
@@ -245,6 +247,155 @@ local function rainbow(center: Vector3, parent: Instance)
 	end
 end
 
+-- ===== Decorado de las bóvedas 5 a 9 =====
+
+-- Juncos de pantano con su espiga.
+local function reeds(rng: Random, position: Vector3, parent: Instance)
+	local m = model("Juncos", parent)
+	for i = 1, 4 do
+		local height = rng:NextNumber(4, 7)
+		local cf = ground(position) * CFrame.new(rng:NextNumber(-1.5, 1.5), 0, rng:NextNumber(-1.5, 1.5)) * CFrame.Angles(math.rad(rng:NextNumber(-8, 8)), 0, math.rad(rng:NextNumber(-8, 8)))
+		deco("Tallo", Enum.PartType.Cylinder, Vector3.new(height, 0.3, 0.3), cf * CFrame.new(0, height / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(70, 150, 110), Enum.Material.Grass, m)
+		if i % 2 == 0 then
+			deco("Espiga", Enum.PartType.Cylinder, Vector3.new(1.4, 0.7, 0.7), cf * CFrame.new(0, height, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(120, 80, 50), nil, m)
+		end
+	end
+end
+
+-- Cristal grande y luminoso del pantano.
+local function swampCrystal(rng: Random, position: Vector3, parent: Instance)
+	local m = model("CristalPantano", parent)
+	local color = if rng:NextNumber() < 0.5 then Color3.fromRGB(90, 235, 215) else Color3.fromRGB(150, 200, 255)
+	for i = 1, 3 do
+		local height = rng:NextNumber(4, 9)
+		local c = part("Cristal", nil, Vector3.new(1.6, height, 1.6), ground(position) * CFrame.new((i - 2) * 1.6, 0, 0) * CFrame.Angles(math.rad(rng:NextNumber(-18, 18)), math.rad(i * 40), math.rad(rng:NextNumber(-18, 18))) * CFrame.new(0, height / 2 - 0.5, 0), color, Enum.Material.Glass, m)
+		c.Transparency = 0.25
+		c.CastShadow = false
+	end
+	local glow = deco("Brillo", Enum.PartType.Ball, Vector3.one * 1.4, ground(position) * CFrame.new(0, 1.4, 0), color, Enum.Material.Neon, m)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 16
+	light.Brightness = 1.2
+	light.Parent = glow
+end
+
+-- Engranaje medio enterrado (o tumbado) de la relojería.
+local function bigGear(rng: Random, position: Vector3, parent: Instance)
+	local m = model("Engranaje", parent)
+	local radius = rng:NextNumber(4, 7)
+	local color = if rng:NextNumber() < 0.5 then Color3.fromRGB(190, 140, 60) else Color3.fromRGB(120, 105, 95)
+	local lying = rng:NextNumber() < 0.4
+	local cf = ground(position) * CFrame.Angles(0, math.rad(rng:NextNumber(0, 180)), 0)
+	if lying then
+		cf = cf * CFrame.new(0, 0.6, 0) * CFrame.Angles(0, 0, math.rad(90)) -- eje hacia arriba
+	else
+		cf = cf * CFrame.new(0, radius * 0.45, 0) * CFrame.Angles(math.rad(rng:NextNumber(-12, 12)), 0, 0)
+	end
+	part("Disco", Enum.PartType.Cylinder, Vector3.new(1.2, radius * 2, radius * 2), cf, color, Enum.Material.Metal, m)
+	deco("Eje", Enum.PartType.Cylinder, Vector3.new(2, radius * 0.5, radius * 0.5), cf, Color3.fromRGB(70, 60, 55), Enum.Material.Metal, m)
+	for i = 0, 3 do
+		deco("Dientes", nil, Vector3.new(1.2, radius * 2.35, radius * 0.4), cf * CFrame.Angles(math.rad(i * 45), 0, 0), color, Enum.Material.Metal, m)
+	end
+end
+
+-- Reloj de pie torcido, con su péndulo.
+local function brokenClock(rng: Random, position: Vector3, parent: Instance)
+	local m = model("RelojDePie", parent)
+	local wood = Color3.fromRGB(110, 70, 45)
+	local cf = ground(position) * CFrame.Angles(0, math.rad(rng:NextNumber(0, 360)), math.rad(rng:NextNumber(-10, 10)))
+	part("Caja", nil, Vector3.new(4, 14, 3), cf * CFrame.new(0, 7, 0), wood, Enum.Material.Wood, m)
+	deco("Remate", nil, Vector3.new(5, 1, 3.6), cf * CFrame.new(0, 14.4, 0), Color3.fromRGB(85, 55, 35), Enum.Material.Wood, m)
+	deco("Esfera", Enum.PartType.Cylinder, Vector3.new(0.3, 3.2, 3.2), cf * CFrame.new(0, 11.5, -1.5) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(245, 235, 210), nil, m)
+	deco("Aguja", nil, Vector3.new(0.25, 1.3, 0.1), cf * CFrame.new(0.3, 11.9, -1.7) * CFrame.Angles(0, 0, math.rad(-30)), Color3.fromRGB(30, 30, 35), nil, m)
+	deco("Aguja", nil, Vector3.new(0.2, 0.9, 0.1), cf * CFrame.new(-0.3, 11.7, -1.7) * CFrame.Angles(0, 0, math.rad(55)), Color3.fromRGB(30, 30, 35), nil, m)
+	deco("Varilla", nil, Vector3.new(0.2, 5, 0.2), cf * CFrame.new(0.5, 6.3, -1.6) * CFrame.Angles(0, 0, math.rad(12)), Art.colors.gold, Enum.Material.Metal, m)
+	deco("Pendulo", Enum.PartType.Cylinder, Vector3.new(0.3, 1.8, 1.8), cf * CFrame.new(1, 3.9, -1.6) * CFrame.Angles(0, math.rad(90), 0), Art.colors.gold, Enum.Material.Metal, m)
+end
+
+-- Columna antigua (entera o rota) con musgo.
+local function ruinPillar(rng: Random, position: Vector3, parent: Instance)
+	local m = model("ColumnaAntigua", parent)
+	local stone = Color3.fromRGB(175, 170, 155)
+	local height = rng:NextNumber(6, 16)
+	local cf = ground(position) * CFrame.Angles(0, math.rad(rng:NextNumber(0, 90)), math.rad(rng:NextNumber(-4, 4)))
+	part("Base", nil, Vector3.new(5, 1.2, 5), cf * CFrame.new(0, 0.6, 0), stone, Enum.Material.Slate, m)
+	part("Fuste", Enum.PartType.Cylinder, Vector3.new(height, 3.4, 3.4), cf * CFrame.new(0, 1.2 + height / 2, 0) * CFrame.Angles(0, 0, math.rad(90)), stone, Enum.Material.Slate, m)
+	local moss = deco("Musgo", nil, Vector3.new(4, 1.4, 4), cf * CFrame.new(0, 1.2 + height, 0), Color3.fromRGB(90, 150, 80), Enum.Material.Grass, m)
+	ellipsoid(moss)
+end
+
+-- Resto de un titán de piedra: una mano que sale del suelo o una cabeza caída.
+local function titanPiece(rng: Random, position: Vector3, parent: Instance)
+	local m = model("RestoDeTitan", parent)
+	local stone = Color3.fromRGB(150, 150, 140)
+	local dark = Color3.fromRGB(115, 115, 110)
+	local cf = ground(position) * CFrame.Angles(0, math.rad(rng:NextNumber(0, 360)), 0)
+	if rng:NextNumber() < 0.5 then
+		part("Palma", nil, Vector3.new(9, 8, 3.5), cf * CFrame.new(0, 3, 0) * CFrame.Angles(math.rad(-12), 0, 0), stone, Enum.Material.Slate, m)
+		for i = 0, 3 do
+			part("Dedo", nil, Vector3.new(1.8, 6.5 + (i % 2) * 1.5, 2.2), cf * CFrame.new(-3.4 + i * 2.25, 9.5, -0.6) * CFrame.Angles(math.rad(-20), 0, 0), if i % 2 == 0 then stone else dark, Enum.Material.Slate, m)
+		end
+		part("Pulgar", nil, Vector3.new(2, 5, 2.4), cf * CFrame.new(5.6, 5, -0.5) * CFrame.Angles(0, 0, math.rad(-35)), dark, Enum.Material.Slate, m)
+	else
+		local head = part("Cabeza", nil, Vector3.new(10, 10, 9), cf * CFrame.new(0, 3.6, 0) * CFrame.Angles(0, 0, math.rad(18)), stone, Enum.Material.Slate, m)
+		deco("Ceja", nil, Vector3.new(9, 1.4, 1.5), head.CFrame * CFrame.new(0, 1.6, -4.6), dark, Enum.Material.Slate, m)
+		deco("Nariz", nil, Vector3.new(1.8, 4, 1.8), head.CFrame * CFrame.new(0, -0.6, -4.9), dark, Enum.Material.Slate, m)
+		for _, side in { -1, 1 } do
+			deco("Ojo", nil, Vector3.new(2, 1, 0.6), head.CFrame * CFrame.new(side * 2.4, 0.4, -4.5), Color3.fromRGB(60, 235, 200), Enum.Material.Neon, m)
+		end
+		local moss = deco("Musgo", nil, Vector3.new(9, 2.5, 8), head.CFrame * CFrame.new(0, 5, 0), Color3.fromRGB(90, 150, 80), Enum.Material.Grass, m)
+		ellipsoid(moss)
+	end
+end
+
+-- Cúpula de observatorio con su telescopio.
+local function observatory(position: Vector3, parent: Instance)
+	local m = model("Observatorio", parent)
+	local cf = ground(position)
+	part("Torre", Enum.PartType.Cylinder, Vector3.new(8, 14, 14), cf * CFrame.new(0, 4, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(205, 205, 220), Enum.Material.Slate, m)
+	part("Cupula", Enum.PartType.Ball, Vector3.one * 14, cf * CFrame.new(0, 8, 0), Color3.fromRGB(70, 80, 170), Enum.Material.Metal, m)
+	deco("Telescopio", Enum.PartType.Cylinder, Vector3.new(12, 2.4, 2.4), cf * CFrame.new(0, 14, -3) * CFrame.Angles(0, math.rad(90), math.rad(-50)), Color3.fromRGB(215, 180, 80), Enum.Material.Metal, m)
+	deco("Lente", Enum.PartType.Ball, Vector3.one * 2.2, cf * CFrame.new(0, 18.5, -6.8), Color3.fromRGB(150, 220, 255), Enum.Material.Neon, m)
+end
+
+-- Astro flotante con su anillo.
+local STAR_COLORS = { Color3.fromRGB(255, 230, 140), Color3.fromRGB(150, 200, 255), Color3.fromRGB(230, 160, 255) }
+local function starOrb(rng: Random, position: Vector3, parent: Instance)
+	local color = STAR_COLORS[rng:NextInteger(1, #STAR_COLORS)]
+	local size = rng:NextNumber(1.2, 3)
+	local cf = CFrame.new(position) * CFrame.Angles(math.rad(rng:NextNumber(-40, 40)), 0, math.rad(rng:NextNumber(-40, 40)))
+	deco("Astro", Enum.PartType.Ball, Vector3.one * size, cf, color, Enum.Material.Neon, parent)
+	if size > 2 then
+		local ring = deco("Anillo", Enum.PartType.Cylinder, Vector3.new(0.15, size * 2.2, size * 2.2), cf * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, parent)
+		ring.Transparency = 0.6
+	end
+end
+
+-- Obelisco oscuro con una veta de luz plateada.
+local function obelisk(rng: Random, position: Vector3, parent: Instance)
+	local m = model("Obelisco", parent)
+	local height = rng:NextNumber(10, 20)
+	local cf = ground(position) * CFrame.Angles(math.rad(rng:NextNumber(-5, 5)), math.rad(rng:NextNumber(0, 90)), math.rad(rng:NextNumber(-5, 5)))
+	part("Cuerpo", nil, Vector3.new(3.4, height, 3.4), cf * CFrame.new(0, height / 2, 0), Color3.fromRGB(28, 26, 40), Enum.Material.Slate, m)
+	deco("Punta", nil, Vector3.new(2.4, 2.4, 2.4), cf * CFrame.new(0, height, 0) * CFrame.Angles(math.rad(45), 0, math.rad(45)), Color3.fromRGB(28, 26, 40), Enum.Material.Slate, m)
+	deco("Veta", nil, Vector3.new(0.4, height * 0.7, 3.5), cf * CFrame.new(0, height * 0.5, 0), Color3.fromRGB(225, 230, 255), Enum.Material.Neon, m)
+end
+
+-- El eclipse: disco negro en el cielo con su corona de luz.
+local function eclipse(position: Vector3, parent: Instance)
+	local m = model("Eclipse", parent)
+	local cf = CFrame.new(position) * CFrame.Angles(0, math.rad(90), 0) -- el eje del disco mira a la plaza
+	local corona = deco("Corona", Enum.PartType.Cylinder, Vector3.new(0.6, 34, 34), cf, Color3.fromRGB(235, 235, 255), Enum.Material.Neon, m)
+	corona.Transparency = 0.15
+	deco("Luna", Enum.PartType.Cylinder, Vector3.new(1.2, 29, 29), cf, Color3.fromRGB(12, 10, 20), nil, m)
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(220, 220, 255)
+	light.Range = 60
+	light.Brightness = 1.5
+	light.Parent = corona
+end
+
 local function lamp(position: Vector3, parent: Instance)
 	local base = ground(position)
 	part("Poste", Enum.PartType.Cylinder, Vector3.new(6, 0.45, 0.45), base * CFrame.new(0, 3, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 55, 65), Enum.Material.Metal, parent).CastShadow = false
@@ -325,7 +476,7 @@ function WorldArt.BuildVault(n: number)
 			local p = edgePoint(rng, n)
 			terrain:FillBall(Vector3.new(p.X, G + 0.5, p.Z), rng:NextNumber(2, 4), Enum.Material.Basalt)
 		end
-	else -- NubePegajosa
+	elseif theme == "NubePegajosa" then
 		for _ = 1, D.clouds do
 			cloudPuff(rng, anyPoint(rng, n) + Vector3.new(0, rng:NextNumber(14, 26), 0), rng:NextNumber(4, 7), m)
 		end
@@ -337,6 +488,72 @@ function WorldArt.BuildVault(n: number)
 			terrainDisc(p, rng:NextNumber(3, 6), 4, G, Enum.Material.Glacier)
 		end
 		rainbow(Vector3.new(0, G, back + 10), m)
+	elseif theme == "PantanoCristal" then
+		for _ = 1, D.ponds do
+			local p = anyPoint(rng, n)
+			local radius = rng:NextNumber(5, 9)
+			terrainDisc(p, radius + 2, 4, G, Enum.Material.Ground)
+			terrainDisc(p, radius, 3, G - 0.2, Enum.Material.Water)
+		end
+		for _ = 1, D.crystals do
+			swampCrystal(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, D.reeds do
+			reeds(rng, edgePoint(rng, n), m)
+		end
+		for i = 1, D.bushes do
+			bigMushroom(rng, edgePoint(rng, n), if i % 2 == 0 then Color3.fromRGB(70, 200, 190) else Color3.fromRGB(130, 120, 230), m)
+		end
+	elseif theme == "RelojeriaAbandonada" then
+		for _ = 1, D.gears do
+			bigGear(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, D.pendulums do
+			brokenClock(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, 4 do
+			local p = anyPoint(rng, n)
+			terrainDisc(p, rng:NextNumber(3, 6), 4, G, Enum.Material.WoodPlanks)
+		end
+	elseif theme == "ValleTitanes" then
+		for _ = 1, D.titanPieces do
+			titanPiece(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, D.pillars do
+			ruinPillar(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, 5 do
+			local p = anyPoint(rng, n)
+			terrainDisc(p, rng:NextNumber(4, 8), 4, G, Enum.Material.LeafyGrass)
+		end
+		for _ = 1, D.rocks do
+			local p = edgePoint(rng, n)
+			terrain:FillBall(Vector3.new(p.X, G + 0.5, p.Z), rng:NextNumber(2, 4), Enum.Material.Rock)
+		end
+	elseif theme == "ObservatorioAstral" then
+		observatory(Vector3.new((if rng:NextNumber() < 0.5 then -1 else 1) * (HALF - 16), G, centerZ), m)
+		for _ = 1, D.starOrbs do
+			starOrb(rng, anyPoint(rng, n) + Vector3.new(0, rng:NextNumber(12, 30), 0), m)
+		end
+		for _ = 1, D.crystals do
+			crystals(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, 4 do
+			local p = anyPoint(rng, n)
+			terrainDisc(p, rng:NextNumber(3, 6), 4, G, Enum.Material.Glacier)
+		end
+	else -- SantuarioEclipse
+		eclipse(Vector3.new(0, G + 46, back + 6), m)
+		for _ = 1, D.obelisks do
+			obelisk(rng, edgePoint(rng, n), m)
+		end
+		for _ = 1, 5 do
+			local p = anyPoint(rng, n)
+			terrainDisc(p, rng:NextNumber(3, 6), 4, G, Enum.Material.Basalt)
+		end
+		for _ = 1, D.starOrbs // 2 do
+			starOrb(rng, anyPoint(rng, n) + Vector3.new(0, rng:NextNumber(14, 28), 0), m)
+		end
 	end
 end
 

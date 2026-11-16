@@ -1,6 +1,6 @@
 --!strict
 -- Aspecto de un bicho: una pieza raíz invisible (la que se mueve, se suelda al jugador y lleva el
--- ProximityPrompt) con el modelo low-poly de CritterArt soldado encima, un aro del color de su
+-- ProximityPrompt) con el modelo por piezas de CritterArt soldado encima, un aro del color de su
 -- rareza en el suelo, luz para Raro o más, chispas para Épico y Legendario, y su etiqueta.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
+local Art = require(Config:WaitForChild("Art"))
 
 local CritterArt = require(script.Parent:WaitForChild("CritterArt"))
 
@@ -51,6 +52,9 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	end
 	part.Color = spec.color
 	part.Material = spec.material or Enum.Material.SmoothPlastic
+	if spec.reflectance then
+		part.Reflectance = spec.reflectance
+	end
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.CanCollide = false
@@ -60,6 +64,14 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	part.Massless = true
 	local rot = spec.rot or Vector3.zero
 	local offset = CFrame.new(spec.pos * scale) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
+	local rot2 = spec.rot2
+	if rot2 then
+		offset *= CFrame.Angles(math.rad(rot2.X), math.rad(rot2.Y), math.rad(rot2.Z))
+	end
+	-- Punto de giro de las piezas animadas (alas, colas, mandíbulas...), para el cliente.
+	if spec.pivot then
+		part:SetAttribute("Pivot", spec.pivot * scale)
+	end
 	part.CFrame = root.CFrame * offset
 	-- Weld clásico con desplazamiento fijo: la pieza sigue a la raíz aunque la raíz se coloque
 	-- antes de estar en el Workspace (un WeldConstraint ahí se quedaría con la posición vieja).
@@ -92,7 +104,10 @@ function CritterVisual.create(def: CritterDef): Part
 	local specs = CritterArt[def.id]
 	if specs then
 		for _, spec in specs do
-			detailPart(root, spec, size)
+			-- Los adornos pequeños se pueden quitar para aligerar (Config/Art.critterDetail).
+			if not spec.fine or Art.critterDetail >= 2 then
+				detailPart(root, spec, size)
+			end
 		end
 	else
 		-- Sin modelo todavía: bola del color de la rareza para que se vea igual.

@@ -64,3 +64,11 @@ Intercambio entre jugadores, mascotas que siguen al jugador, clanes, ranking glo
 ## Preguntas abiertas
 - ¿Estilo visual? (propuesta: low-poly de colores saturados)
 - ¿Nombre final y en qué idiomas? (propuesta: inglés como principal + traducción automática de Roblox)
+
+## Catálogo v3: 7 rarezas, 21 bichos y 9 bóvedas
+
+El catálogo original de 8 bichos se ha sustituido por 21 (3 por rareza) con dos rarezas nuevas, Mítico y
+Secreto, y cinco bóvedas con nombre más (Pantano de Cristal, Relojería Abandonada, Valle de los Titanes,
+Observatorio Astral y Santuario del Eclipse). La curva de rarezas por bóveda y el reparto exacto por bicho
+están en `design/Rarezas.md`; los números viven en `src/shared/Config/Critters.luau`. Vista de los modelos:
+`design/bichos/bichos_21.png`.

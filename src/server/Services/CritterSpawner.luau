@@ -142,42 +142,11 @@ local function countWild(vault: number): number
 	return count
 end
 
--- Elige un bicho: primero la rareza (según su peso, con `luck` > 1 las no comunes pesan más)
--- y luego un bicho de esa rareza.
-local function pickCritter(pool: { CritterDef }, luck: number): CritterDef?
-	local byRarity: { [string]: { CritterDef } } = {}
-	for _, def in pool do
-		local list = byRarity[def.rarity]
-		if not list then
-			list = {}
-			byRarity[def.rarity] = list
-		end
-		table.insert(list, def)
-	end
-	local function weightOf(rarity: string): number
-		local weight = CrittersConfig.Rarities[rarity].weight
-		return if rarity == "Comun" then weight else weight * luck
-	end
-	local total = 0
-	for rarity in byRarity do
-		total += weightOf(rarity)
-	end
-	if total <= 0 then
-		return nil
-	end
-	local roll = rng:NextNumber(0, total)
-	local chosen: { CritterDef }? = nil
-	for rarity, list in byRarity do
-		chosen = list
-		roll -= weightOf(rarity)
-		if roll <= 0 then
-			break
-		end
-	end
-	if not chosen then
-		return nil
-	end
-	return chosen[rng:NextInteger(1, #chosen)]
+-- Elige un bicho para la bóveda: primero la rareza (porcentajes de Config/Critters.VaultChances) y
+-- luego, a partes iguales, uno de los bichos de esa rareza que ya salen ahí. Con `luck` > 1 las
+-- rarezas por encima de la más común pesan más (Suerte x2).
+local function pickCritter(vault: number, luck: number): CritterDef?
+	return VaultMath.pickCritter(vault, luck, rng:NextNumber())
 end
 
 local function firstCommon(): CritterDef?
@@ -551,7 +520,7 @@ local function spawnLoop()
 					if countWild(vault) >= cap then
 						break
 					end
-					local def = pickCritter(VaultMath.critterPool(vault), VaultMath.luck(vault))
+					local def = pickCritter(vault, 1)
 					local exclusive = exclusiveDef
 					if exclusive and rng:NextNumber() < exclusiveChance then
 						def = exclusive
@@ -576,7 +545,7 @@ local function luckLoop()
 				if profile and root and profile.luckUntil > os.time() and luckCritter[player] == nil then
 					local vault = VaultMath.vaultAt(root.Position)
 					if vault and Vaults.IsUnlocked(player, vault) then
-						local def = pickCritter(VaultMath.critterPool(vault), VaultMath.luck(vault) * Luck.rarityMultiplier)
+						local def = pickCritter(vault, Luck.rarityMultiplier)
 						if def then
 							local angle = rng:NextNumber(0, math.pi * 2)
 							local point = clampToVault(vault, root.Position + Vector3.new(math.cos(angle), 0, math.sin(angle)) * Luck.spawnDistance)

@@ -78,7 +78,7 @@ local function runLegendary()
 			nextAt = now + L.intervalSeconds
 			legendaryAlive = true
 			CritterSpawner.SpawnEvent(def, 1, LEGENDARY_TAG, L.lifetimeSeconds)
-			announce("⭐ ¡Ha aparecido la " .. def.name .. " LEGENDARIA en la Playa Rara! El primero que la atrape se la queda.", GOLD)
+			announce("⭐ ¡Ha aparecido el LEGENDARIO " .. def.name .. " en la Playa Rara! El primero que lo atrape se lo queda.", GOLD)
 		end
 	end
 end
@@ -130,7 +130,7 @@ local function updateRain()
 		local exclusive = defsById[R.exclusiveCritterId]
 		announce(
 			"🌧 ¡Empieza la LLUVIA DE BICHOS! " .. R.durationMinutes .. " minutos con bichos x" .. R.spawnMultiplier
-				.. (if exclusive then " y la " .. exclusive.name .. ", que solo sale hoy." else "."),
+				.. (if exclusive then " y un bicho que solo sale hoy: " .. exclusive.name .. "." else "."),
 			RAIN
 		)
 	else
@@ -148,14 +148,14 @@ function LiveEvents.Start()
 	CritterSpawner.OnCaught(function(player, def, tag)
 		if tag == LEGENDARY_TAG then
 			legendaryAlive = false
-			announce("🏆 ¡" .. player.DisplayName .. " ha atrapado a la " .. def.name .. " LEGENDARIA!", GOLD)
+			announce("🏆 ¡" .. player.DisplayName .. " ha atrapado al LEGENDARIO " .. def.name .. "!", GOLD)
 			Analytics.Custom(player, "legendario_atrapado")
 		end
 	end)
 	CritterSpawner.OnExpired(function(def, tag)
 		if tag == LEGENDARY_TAG then
 			legendaryAlive = false
-			announce("💨 La " .. def.name .. " legendaria se ha ido volando. ¡Vuelve en " .. L.intervalSeconds // 60 .. " minutos!", GOLD)
+			announce("💨 El legendario " .. def.name .. " se ha escapado. ¡Vuelve en " .. L.intervalSeconds // 60 .. " minutos!", GOLD)
 		end
 	end)
 	task.spawn(runLegendary)
