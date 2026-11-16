@@ -22,6 +22,7 @@ local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 
 type MachineDef = Mutations.MachineDef
 
@@ -32,6 +33,7 @@ local Fusion = {}
 
 local rng = Random.new()
 local lastAction: { [Player]: number } = {}
+local machinePositions: { [string]: Vector3 } = {} -- dónde está cada máquina (para validar distancia)
 
 local defsById: { [string]: CrittersConfig.Critter } = {}
 for _, def in CrittersConfig.List do
@@ -111,6 +113,7 @@ local function buildMachine(def: MachineDef, position: Vector3)
 	end)
 
 	model.Parent = Workspace
+	machinePositions[def.id] = base.Position
 end
 
 local function onFuse(player: Player, machineId: unknown, critterId: unknown, preferColor: unknown)
@@ -126,6 +129,12 @@ local function onFuse(player: Player, machineId: unknown, critterId: unknown, pr
 	local def = defsById[critterId]
 	local profile = Data.Get(player)
 	if not machine or not def or not profile then
+		return
+	end
+	-- Hay que estar junto a la máquina (el menú solo se abre allí, pero un tramposo puede pedirlo desde lejos).
+	local machinePosition = machinePositions[machine.id]
+	if not machinePosition or not Guard.IsNear(player, machinePosition, P.promptDistance) then
+		notify(player, "Acércate a la máquina " .. machine.title .. " para usarla.")
 		return
 	end
 
@@ -154,18 +163,18 @@ local function onFuse(player: Player, machineId: unknown, critterId: unknown, pr
 		return a.index < b.index
 	end)
 
-	local cost = MutationMath.fusionCost(machine, def.coinsPerSecond)
-	if not Economy.TrySpend(player, cost) then
-		notify(player, "Te faltan monedas: la " .. machine.title .. " cuesta " .. Format.number(cost) .. " 💰 para este bicho.")
-		return
-	end
-
 	local used = {}
 	local multiplier = math.huge
 	for i = 1, machine.count do
 		local candidate = candidates[i]
 		table.insert(used, candidate)
 		multiplier = math.min(multiplier, candidate.multiplier) -- el multiplicador de bóveda más bajo
+	end
+
+	local cost = MutationMath.fusionCost(machine, def.coinsPerSecond, multiplier)
+	if not Economy.TrySpend(player, cost) then
+		notify(player, "Te faltan monedas: la " .. machine.title .. " cuesta " .. Format.number(cost) .. " 💰 para este bicho.")
+		return
 	end
 	local color = used[rng:NextInteger(1, #used)].color
 
@@ -191,7 +200,7 @@ function Fusion.Start()
 		local side = if index % 2 == 1 then -1 else 1
 		buildMachine(machine, Vector3.new(side * P.offsetX, Gameplay.GroundY, z))
 	end
-	Remotes.Fuse.OnServerEvent:Connect(onFuse)
+	Guard.Connect(Remotes.Fuse, "Fuse", onFuse)
 	game:GetService("Players").PlayerRemoving:Connect(function(player)
 		lastAction[player] = nil
 	end)

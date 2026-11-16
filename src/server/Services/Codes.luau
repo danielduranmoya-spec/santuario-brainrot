@@ -14,6 +14,7 @@ local Format = require(Shared:WaitForChild("Format"))
 local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local Codes = {}
@@ -75,7 +76,7 @@ local function onRedeem(player: Player, raw: unknown)
 end
 
 function Codes.Start()
-	Remotes.RedeemCode.OnServerEvent:Connect(onRedeem)
+	Guard.Connect(Remotes.RedeemCode, "RedeemCode", onRedeem)
 	Players.PlayerRemoving:Connect(function(player)
 		lastAttempt[player] = nil
 	end)

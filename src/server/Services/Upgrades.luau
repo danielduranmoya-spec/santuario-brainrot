@@ -16,6 +16,7 @@ local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local Upgrades = {}
@@ -72,7 +73,7 @@ local function onBuyUpgrade(player: Player, name: unknown)
 end
 
 function Upgrades.Start()
-	Remotes.BuyUpgrade.OnServerEvent:Connect(onBuyUpgrade)
+	Guard.Connect(Remotes.BuyUpgrade, "BuyUpgrade", onBuyUpgrade)
 	Players.PlayerAdded:Connect(function(player)
 		player.CharacterAdded:Connect(function(character)
 			character:WaitForChild("Humanoid", 10)

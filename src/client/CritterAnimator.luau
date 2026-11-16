@@ -11,7 +11,9 @@
 -- Las piezas con el atributo "Pivot" (lo pone server/CritterVisual) giran alrededor de ese punto,
 -- así un ala o una cabeza de varias piezas se mueve como un solo bloque.
 -- Cada pieza va soldada a la raíz con un Weld; aquí se cambia su C0 a partir del original.
--- Para cuidar el móvil: solo se animan los bichos cercanos y a ~30 fotogramas por segundo.
+-- Para cuidar el móvil: solo se animan los bichos cercanos y a ~30 fotogramas por segundo (20 en
+-- bajo detalle, ver client/Performance). En bajo detalle el cuerpo no se balancea ni rueda: solo se
+-- mueven las piezas con nombre (alas, colas...), así se tocan 5-10 piezas por bicho en vez de ~50.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +22,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local Art = require(Config:WaitForChild("Art"))
+local Performance = require(script.Parent:WaitForChild("Performance"))
 
 local A = Art.animation
 
@@ -55,6 +58,7 @@ local function track(root: Instance)
 	if not root:IsA("BasePart") or tracked[root] or root:GetAttribute("CritterId") == nil then
 		return
 	end
+	Performance.Prepare(root) -- quita adornos en bajo detalle antes de apuntar las piezas
 	local entry: Tracked = {
 		root = root,
 		welds = {},
@@ -119,9 +123,10 @@ function CritterAnimator.Start()
 	end)
 
 	local accumulator = 0
+	local lowDetail = Performance.lowDetail
 	RunService.RenderStepped:Connect(function(dt)
 		accumulator += dt
-		if accumulator < 1 / A.fps then
+		if accumulator < 1 / Performance.animationFps then
 			return
 		end
 		accumulator = 0
@@ -133,10 +138,10 @@ function CritterAnimator.Start()
 		local now = os.clock()
 
 		for root, entry in tracked do
-			if (root.Position - cameraPosition).Magnitude <= A.maxDistance then
+			if (root.Position - cameraPosition).Magnitude <= Performance.animationDistance then
 				local size = root.Size.Y
 				local t = now * A.speed + entry.phase
-				local bob = math.sin(t) * A.bobHeight * size * (if entry.flying then 2.5 else 1)
+				local bob = if lowDetail then 0 else math.sin(t) * A.bobHeight * size * (if entry.flying then 2.5 else 1)
 				local blinking = now >= entry.nextBlink
 				if now >= entry.nextBlink + A.blinkSeconds then
 					entry.nextBlink = now + rng:NextNumber(A.blinkEverySeconds * 0.5, A.blinkEverySeconds * 1.5)
@@ -144,7 +149,7 @@ function CritterAnimator.Start()
 				local body = CFrame.new(0, bob, 0)
 
 				-- Rodar o dar volteretas mientras se mueve; al pararse, vuelve a quedar derecho.
-				local rollAxis = entry.rollAxis
+				local rollAxis = if lowDetail then nil else entry.rollAxis
 				if rollAxis then
 					local moved = (root.Position - entry.lastPosition).Magnitude
 					entry.lastPosition = root.Position
@@ -210,8 +215,8 @@ function CritterAnimator.Start()
 						local fall = (now * A.dropSpeed + entry.phase) % 1
 						item.weld.C0 = body * base * CFrame.new(0, -fall * size * 0.3, 0)
 						piece.Transparency = fall
-					else
-						item.weld.C0 = body * base
+					elseif not lowDetail then
+						item.weld.C0 = body * base -- pieza fija: solo sigue el balanceo del cuerpo
 					end
 					-- Mutación Arcoíris: el tono gira sin parar, cada pieza desfasada según su color original.
 					local rainbowOffset = item.rainbow

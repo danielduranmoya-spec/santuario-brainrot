@@ -29,3 +29,29 @@ La simulación está en [`simulacion_economia.py`](simulacion_economia.py) (`pyt
 
 ## Cómo comprobarlo con jugadores de verdad
 En el Creator Hub > Analíticas > Embudos verás cuántos jugadores llegan a `zona_2` y `zona_3` (ver `Config/Analytics.luau`). Si menos de la mitad de los que cobran llegan a `zona_2`, baja su precio; si casi todos llegan en 2 minutos, súbelo.
+
+## Mutaciones (noviembre 2026): ¿rompen los precios?
+Pregunta: con Vacío x8 y Enorme x7 (x56 en total), ¿un jugador con suerte se salta las bóvedas?
+La simulación ahora lee los números directamente de `src/shared/Config` (catálogo de 21 bichos,
+9 bóvedas, mutaciones y eventos), así que basta con volver a ejecutarla tras cambiar el balance.
+
+Minuto en que se abre cada bóveda (400 jugadores, 60 minutos):
+
+| Bóveda | Sin mutaciones | Con mutaciones (mediana) | Con mutaciones (el 5 % con más suerte) |
+|---|---|---|---|
+| 2 | 4,3 | 3,9 | 2,8 |
+| 3 | 13,3 | 11,7 | 8,7 |
+| 4 | 31,9 | 27,4 | 20,6 |
+| 5 | 49,1 | 43,6 | 31,4 |
+
+- Las mutaciones adelantan al jugador medio un 10-15 %, y al 5 % con más suerte un 25-35 %. No se
+  salta bóvedas: el precio de cada bóveda sube x4 y un bicho x56 sale en menos de 1 de cada
+  100.000 apariciones.
+- Peor caso, con alguien invocando la Grieta del Vacío sin parar: casi igual que sin evento
+  (el Vacío sigue siendo rarísimo). La Fiebre del Oro sin parar adelanta algo más, pero poco.
+- Pase Red Titánica: adelanta un 5-10 % más. Es una ventaja de pago aceptable.
+- **Fallo corregido:** la fusión no contaba el multiplicador de bóveda, así que en las bóvedas
+  lejanas salía casi gratis. Ver `design/Mutaciones.md`.
+- Ojo: con el catálogo v3, la bóveda 4 (300.000) se abre hacia el minuto 27 y la 5 hacia el
+  minuto 44. Es más lento que el objetivo de la tabla de arriba. No lo he cambiado porque es una
+  decisión de ritmo. Si quieres que la 4 llegue antes, bájala a unos 150.000.

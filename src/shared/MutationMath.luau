@@ -138,9 +138,12 @@ function MutationMath.machine(id: string): MachineDef?
 	return nil
 end
 
--- Monedas que cuesta usar una máquina con un bicho que produce `coinsPerSecond` de base.
-function MutationMath.fusionCost(machine: MachineDef, coinsPerSecond: number): number
-	return math.max(machine.minCost, math.floor(coinsPerSecond * machine.costSeconds))
+-- Monedas que cuesta usar una máquina: lo que produce en `costSeconds` uno de los bichos que entran
+-- (base x multiplicador de bóveda x tamaño de entrada; el color no cuenta, es pura suerte).
+-- Antes no contaba la bóveda y en las bóvedas lejanas (x243) fusionar salía casi gratis.
+function MutationMath.fusionCost(machine: MachineDef, coinsPerSecond: number, vaultMultiplier: number?): number
+	local income = coinsPerSecond * (vaultMultiplier or 1) * MutationMath.size(machine.from).multiplier
+	return math.max(machine.minCost, math.floor(income * machine.costSeconds))
 end
 
 function MutationMath.event(id: string): EventDef?

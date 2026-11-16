@@ -22,6 +22,7 @@ local Remotes = {
 	Effect = newEvent("Effect"), -- (tipo: string, posición: Vector3?, dato: any) solo efectos visuales/sonido
 	Announce = newEvent("Announce"), -- (texto: string, color: Color3?) aviso para todos, también en el chat
 	OpenMachine = newEvent("OpenMachine"), -- (máquina: string) abre el menú de una máquina de fusión
+	RareSpawn = newEvent("RareSpawn"), -- (texto: string, color: Color3, bóveda: number) mutación rara a la vista
 	-- cliente -> servidor
 	AttemptCatch = newEvent("AttemptCatch"), -- (momento en tiempo de servidor: number)
 	ReleaseCarried = newEvent("ReleaseCarried"), -- ()

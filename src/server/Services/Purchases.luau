@@ -21,6 +21,7 @@ local Mutations = require(Config:WaitForChild("Mutations"))
 local Data = require(script.Parent:WaitForChild("Data"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 local MutationEvents = require(script.Parent:WaitForChild("MutationEvents"))
 
@@ -220,7 +221,7 @@ function Purchases.Start()
 			Remotes.Effect:FireClient(player, "recompensa")
 		end
 	end)
-	Remotes.PromptPurchase.OnServerEvent:Connect(onPromptPurchase)
+	Guard.Connect(Remotes.PromptPurchase, "PromptPurchase", onPromptPurchase)
 
 	local function onPlayerAdded(player: Player)
 		joinedAt[player] = os.clock()

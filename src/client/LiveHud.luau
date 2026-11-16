@@ -4,6 +4,8 @@
 --   * Cartel arriba a la derecha con cuentas atrás: legendario, Lluvia de Bichos, evento de
 --     mutación (Fiebre del Oro, Grieta del Vacío...), cebo, valla.
 --   * Marca "⭐ LEGENDARIO" sobre el bicho legendario de servidor.
+--   * Mutación rara (Remotes.RareSpawn): aviso grande arriba unos segundos, sonido y una baliza con
+--     la distancia sobre el bicho, que se ve desde lejos (Config/Mutations.rareAlert).
 --   * Botón VALLA cuando te ponen un cebo.
 --   * Esconde los avisos "Poner cebo" en tu propio santuario o si no tienes cebos, y el "Espantar"
 --     de los cebos que no son tuyos.
@@ -22,12 +24,14 @@ local Config = Shared:WaitForChild("Config")
 local Events = require(Config:WaitForChild("Events"))
 local Format = require(Shared:WaitForChild("Format"))
 local MutationMath = require(Shared:WaitForChild("MutationMath"))
+local Mutations = require(Config:WaitForChild("Mutations"))
 local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Announce = remotes:WaitForChild("Announce") :: RemoteEvent
 local BuyFence = remotes:WaitForChild("BuyFence") :: RemoteEvent
+local RareSpawn = remotes:WaitForChild("RareSpawn") :: RemoteEvent
 
 local COLOR_DARK = Color3.fromRGB(25, 25, 35)
 local COLOR_GOLD = Color3.fromRGB(255, 200, 40)
@@ -113,6 +117,56 @@ local function markLegendary(child: Instance)
 	end)
 end
 
+-- Baliza sobre un bicho con mutación rara: nombre y distancia, visible desde lejos y por encima de
+-- todo. Tamaño en píxeles, así se lee igual en un móvil que en un ordenador.
+local beacons: { [BasePart]: TextLabel } = {}
+
+local function markRare(child: Instance)
+	if not child:IsA("BasePart") or child:GetAttribute("RareMutation") ~= true or beacons[child] then
+		return
+	end
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "BalizaMutacion"
+	billboard.Size = UDim2.fromOffset(190, 54)
+	billboard.StudsOffsetWorldSpace = Vector3.new(0, child.Size.Y / 2 + 4, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = Mutations.rareAlert.beaconMaxDistance
+	billboard.Parent = child
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundColor3 = COLOR_DARK
+	text.BackgroundTransparency = 0.35
+	text.Font = Enum.Font.GothamBlack
+	text.TextScaled = true
+	text.TextColor3 = COLOR_GOLD
+	text.TextStrokeTransparency = 0
+	text.Parent = billboard
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = text
+	local nameText = "✨ " .. MutationMath.displayName("", tostring(child:GetAttribute("MutationColor") or ""), tostring(child:GetAttribute("MutationSize") or ""))
+	text:SetAttribute("Base", nameText)
+	text.Text = nameText
+	beacons[child] = text
+	local function remove()
+		if beacons[child] == text then
+			beacons[child] = nil
+			billboard:Destroy()
+		end
+	end
+	child:GetAttributeChangedSignal("RareMutation"):Connect(function()
+		if child:GetAttribute("RareMutation") ~= true then
+			remove() -- alguien lo ha atrapado
+		end
+	end)
+	child.AncestryChanged:Connect(function(_, parent)
+		if parent == nil then
+			remove()
+		end
+	end)
+end
+
 -- Avisos de cebo: "Poner cebo" solo en santuarios ajenos y si tienes cebos; "Espantar" solo el dueño.
 local function refreshPrompts()
 	local baits = (player:GetAttribute("Baits") :: number?) or 0
@@ -171,6 +225,57 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 	bannerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	bannerStroke.Parent = banner
 
+	-- Aviso de mutación rara: arriba en el centro (encima de la pista), nunca en el centro de la pantalla.
+	local rare = Instance.new("TextLabel")
+	rare.Name = "AvisoMutacionRara"
+	rare.AnchorPoint = Vector2.new(0.5, 0.5)
+	rare.Position = UDim2.fromScale(0.5, 0.14)
+	rare.Size = UDim2.fromScale(0.62, 0.075)
+	rare.BackgroundColor3 = COLOR_DARK
+	rare.BackgroundTransparency = 0.15
+	rare.Font = Enum.Font.GothamBlack
+	rare.TextScaled = true
+	rare.TextColor3 = Color3.new(1, 1, 1)
+	rare.TextStrokeTransparency = 0.3
+	rare.ZIndex = 4
+	rare.Visible = false
+	rare.Parent = gui
+	local rareCorner = Instance.new("UICorner")
+	rareCorner.CornerRadius = UDim.new(0.3, 0)
+	rareCorner.Parent = rare
+	local rareStroke = Instance.new("UIStroke")
+	rareStroke.Thickness = 3
+	rareStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	rareStroke.Parent = rare
+	local rareLimit = Instance.new("UISizeConstraint")
+	rareLimit.MinSize = Vector2.new(300, 40)
+	rareLimit.MaxSize = Vector2.new(760, 70)
+	rareLimit.Parent = rare
+	local rarePadding = Instance.new("UIPadding")
+	rarePadding.PaddingTop = UDim.new(0.12, 0)
+	rarePadding.PaddingBottom = UDim.new(0.12, 0)
+	rarePadding.PaddingLeft = UDim.new(0.03, 0)
+	rarePadding.PaddingRight = UDim.new(0.03, 0)
+	rarePadding.Parent = rare
+	local rareId = 0
+	RareSpawn.OnClientEvent:Connect(function(text: string, color: Color3, vault: number)
+		local maxVault = (player:GetAttribute("MaxVault") :: number?) or 1
+		local tail = if vault <= maxVault then " ¡Corre, sigue la baliza!" else " Abre esa bóveda para atraparlo."
+		rareId += 1
+		local myId = rareId
+		rare.Text = text .. tail
+		rareStroke.Color = color
+		rare.Visible = true
+		Effects.Pop(rare)
+		Effects.Play("alerta")
+		postToChat(text)
+		task.delay(Mutations.rareAlert.showSeconds, function()
+			if rareId == myId then
+				rare.Visible = false
+			end
+		end)
+	end)
+
 	local fenceButton = newBigButton(gui, "Valla", "🛡 VALLA " .. Format.number(Events.Bait.fenceCost) .. " 💰", COLOR_FENCE, Vector2.new(1, 0), UDim2.new(1, -12, 0, 110))
 
 	fenceButton.Activated:Connect(function()
@@ -192,9 +297,25 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 
 	local critters = Workspace:WaitForChild("Critters")
 	critters.ChildAdded:Connect(markLegendary)
+	critters.ChildAdded:Connect(markRare)
 	for _, child in critters:GetChildren() do
 		markLegendary(child)
+		markRare(child)
 	end
+	-- Distancia en las balizas, dos veces por segundo.
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if root and root:IsA("BasePart") then
+				for part, label in beacons do
+					local meters = math.floor((part.Position - root.Position).Magnitude + 0.5)
+					label.Text = tostring(label:GetAttribute("Base")) .. "\n" .. meters .. " m"
+				end
+			end
+		end
+	end)
 
 	task.spawn(function()
 		while true do

@@ -222,8 +222,10 @@ local function load(player: Player): (Profile?, boolean)
 		else
 			local message = tostring(err)
 			if isUnavailableError(message) then
+				if storeAvailable then -- el aviso, una sola vez por servidor
+					warn("[Data] DataStore no disponible: " .. message)
+				end
 				storeAvailable = false
-				warn("[Data] DataStore no disponible: " .. message)
 				return defaultProfile(), false
 			end
 			warn("[Data] Error al cargar (intento " .. attempt .. "): " .. message)

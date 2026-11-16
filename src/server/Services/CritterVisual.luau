@@ -149,7 +149,11 @@ function CritterVisual.create(def: CritterDef, color: string?, sizeId: string?, 
 		for _, spec in specs do
 			-- Los adornos pequeños se pueden quitar para aligerar (Config/Art.critterDetail).
 			if not spec.fine or Art.critterDetail >= 2 then
-				applyColor(detailPart(root, spec, size), spec, look)
+				local part = detailPart(root, spec, size)
+				applyColor(part, spec, look)
+				if spec.fine then
+					part:SetAttribute("Fine", true) -- los móviles lo quitan solo en su pantalla (client/Performance)
+				end
 			end
 		end
 	else

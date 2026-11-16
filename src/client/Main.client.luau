@@ -19,9 +19,12 @@ local Format = require(Shared:WaitForChild("Format"))
 local Menus = require(script.Parent:WaitForChild("Menus"))
 local VaultDoors = require(script.Parent:WaitForChild("VaultDoors"))
 local VaultMath = require(Shared:WaitForChild("VaultMath"))
+local Gameplay = require(Shared:WaitForChild("Config"):WaitForChild("Gameplay"))
+local Progression = require(Shared:WaitForChild("Config"):WaitForChild("Progression"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local Ambience = require(script.Parent:WaitForChild("Ambience"))
 local CritterAnimator = require(script.Parent:WaitForChild("CritterAnimator"))
+local Performance = require(script.Parent:WaitForChild("Performance"))
 local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
 local LiveHud = require(script.Parent:WaitForChild("LiveHud"))
 
@@ -52,6 +55,21 @@ type MinigameData = {
 }
 
 -- ===================== Interfaz =====================
+
+-- Móvil o tablet: botones y textos con un tamaño mínimo en píxeles, para poder pulsarlos y leerlos.
+local IS_TOUCH = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- Tamaño mínimo (y máximo) en píxeles de un elemento de la interfaz.
+local function limitSize(object: GuiObject, minSize: Vector2?, maxSize: Vector2?)
+	local limit = object:FindFirstChildOfClass("UISizeConstraint") or Instance.new("UISizeConstraint")
+	if minSize then
+		limit.MinSize = minSize
+	end
+	if maxSize then
+		limit.MaxSize = maxSize
+	end
+	limit.Parent = object
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "SantuarioUI"
@@ -104,7 +122,6 @@ end
 
 -- En móvil, abajo a la izquierda está el joystick y abajo a la derecha el botón de saltar:
 -- las esquinas de abajo se suben para no taparlos.
-local IS_TOUCH = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 local CORNER_LIFT = if IS_TOUCH then -200 else -12
 
 -- ===== Cartera (abajo a la izquierda): monedas y monedas por segundo =====
@@ -214,12 +231,16 @@ nextPadding.PaddingTop = UDim.new(0.15, 0)
 nextPadding.PaddingBottom = UDim.new(0.15, 0)
 nextPadding.Parent = nextText
 
-local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.12), gui)
+local hintLabel = newLabel("Pista", UDim2.fromScale(0.5, 0.055), UDim2.fromScale(0.5, 0.12), gui)
 hintLabel.Visible = false
+-- Ancho máximo: que no llegue bajo la lista de jugadores ni los botones de Roblox de arriba.
+limitSize(hintLabel, Vector2.new(260, if IS_TOUCH then 34 else 28), Vector2.new(620, 60))
 
 local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.22), gui)
 toastLabel.TextWrapped = true
 toastLabel.Visible = false
+limitSize(toastLabel, Vector2.new(280, if IS_TOUCH then 46 else 36), Vector2.new(680, 90))
+limitSize(nextFrame, Vector2.new(260, if IS_TOUCH then 26 else 22), Vector2.new(700, 44))
 
 -- Barra del minijuego
 local barTitle = newLabel("TituloBarra", UDim2.fromScale(0.6, 0.05), UDim2.fromScale(0.5, 0.64), gui)
@@ -255,6 +276,15 @@ nowButton.Text = "¡AHORA!"
 
 local releaseButton = newButton("Soltar", UDim2.fromScale(0.18, 0.07), UDim2.fromScale(0.5, 0.97), COLOR_BAD)
 releaseButton.Text = "SOLTAR"
+
+-- En un móvil en horizontal (unos 390 píxeles de alto) SOLTAR medía 27 píxeles: ahora nunca menos
+-- de lo que pide un dedo (unos 48-56 píxeles de alto).
+if IS_TOUCH then
+	limitSize(nowButton, Vector2.new(220, 86), nil)
+	limitSize(releaseButton, Vector2.new(170, 60), nil)
+	limitSize(bar, Vector2.new(260, 30), nil)
+	limitSize(barTitle, Vector2.new(240, 30), nil)
+end
 
 -- ===================== Estado =====================
 
@@ -384,6 +414,172 @@ for _, child in critterFolder:GetChildren() do
 	markTutorial(child)
 end
 
+-- ===================== Objetivos de los primeros minutos =====================
+-- Panel pequeño a la derecha (el centro de la pantalla queda libre) con el objetivo actual y una
+-- barra de progreso. Se apoya en lo que guarda el servidor, así que no se repite al volver a entrar.
+
+local TUTORIAL = Gameplay.Tutorial
+
+local objectives = Instance.new("Frame")
+objectives.Name = "Objetivos"
+objectives.AnchorPoint = Vector2.new(1, 0.5)
+objectives.Position = UDim2.new(1, -12, 0.55, 0)
+objectives.Size = UDim2.fromScale(0.24, 0.13)
+objectives.BackgroundColor3 = COLOR_DARK
+objectives.BackgroundTransparency = 0.25
+objectives.Visible = false
+objectives.Parent = gui
+addCorner(objectives)
+limitSize(objectives, Vector2.new(if IS_TOUCH then 210 else 190, if IS_TOUCH then 78 else 70), Vector2.new(330, 120))
+local objectivesStroke = Instance.new("UIStroke")
+objectivesStroke.Color = COLOR_GOLD
+objectivesStroke.Thickness = 2
+objectivesStroke.Transparency = 0.3
+objectivesStroke.Parent = objectives
+
+local objectivesTitle = Instance.new("TextLabel")
+objectivesTitle.Name = "Titulo"
+objectivesTitle.BackgroundTransparency = 1
+objectivesTitle.Position = UDim2.fromScale(0.06, 0.06)
+objectivesTitle.Size = UDim2.fromScale(0.88, 0.28)
+objectivesTitle.Font = Enum.Font.GothamBlack
+objectivesTitle.TextScaled = true
+objectivesTitle.TextXAlignment = Enum.TextXAlignment.Left
+objectivesTitle.TextColor3 = COLOR_GOLD
+objectivesTitle.Parent = objectives
+
+local objectivesText = Instance.new("TextLabel")
+objectivesText.Name = "Objetivo"
+objectivesText.BackgroundTransparency = 1
+objectivesText.Position = UDim2.fromScale(0.06, 0.36)
+objectivesText.Size = UDim2.fromScale(0.88, 0.4)
+objectivesText.Font = Enum.Font.GothamBold
+objectivesText.TextScaled = true
+objectivesText.TextWrapped = true
+objectivesText.TextXAlignment = Enum.TextXAlignment.Left
+objectivesText.TextColor3 = Color3.new(1, 1, 1)
+objectivesText.Parent = objectives
+
+local objectivesTrack = Instance.new("Frame")
+objectivesTrack.Name = "Progreso"
+objectivesTrack.Position = UDim2.fromScale(0.06, 0.82)
+objectivesTrack.Size = UDim2.fromScale(0.88, 0.09)
+objectivesTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+objectivesTrack.BorderSizePixel = 0
+objectivesTrack.Parent = objectives
+addCorner(objectivesTrack)
+local objectivesFill = Instance.new("Frame")
+objectivesFill.Size = UDim2.fromScale(0, 1)
+objectivesFill.BackgroundColor3 = COLOR_GOOD
+objectivesFill.BorderSizePixel = 0
+objectivesFill.Parent = objectivesTrack
+addCorner(objectivesFill)
+
+local function critterCount(): number
+	return (player:GetAttribute("CritterCount") :: number?) or 0
+end
+
+local function anyUpgrade(): boolean
+	for _, name in Progression.UpgradeOrder do
+		if ((player:GetAttribute("Upgrade_" .. name) :: number?) or 0) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- Cada objetivo: texto y si ya está hecho.
+local OBJECTIVES: { { text: string, done: () -> boolean } } = {
+	{ text = "Atrapa un bicho: acércate y pulsa Atrapar", done = function()
+		return hasCaught or critterCount() >= 1
+	end },
+	{ text = "Lleva el bicho a tu santuario", done = function()
+		return critterCount() >= 1
+	end },
+	{ text = "Pisa el cofre dorado para cobrar", done = function()
+		return hasCollected
+	end },
+	{ text = "Compra una mejora en MEJORAS", done = anyUpgrade },
+	{ text = "Ten " .. TUTORIAL.critterGoal .. " bichos en tu santuario", done = function()
+		return critterCount() >= TUTORIAL.critterGoal
+	end },
+	{ text = "Abre la bóveda " .. TUTORIAL.vaultGoal .. " (sigue el rayo amarillo)", done = function()
+		return ((player:GetAttribute("MaxVault") :: number?) or 1) >= TUTORIAL.vaultGoal
+	end },
+}
+
+local objectivesFinished = false
+local lastObjective = 0
+local dataReady = false -- hasta que llega la partida guardada no se sabe qué objetivos ya tiene
+
+local function refreshObjectives()
+	if objectivesFinished or not dataReady then
+		return
+	end
+	local current = #OBJECTIVES + 1
+	for index, objective in OBJECTIVES do
+		if not objective.done() then
+			current = index
+			break
+		end
+	end
+	if current > #OBJECTIVES then
+		objectivesFinished = true
+		if lastObjective == 0 then
+			return -- ya los tenía todos al entrar: no se enseña nada
+		end
+		objectivesTitle.Text = "🎯 ¡Objetivos completados!"
+		objectivesText.Text = "Ahora atrapa bichos más raros y abre más bóvedas."
+		objectivesFill.Size = UDim2.fromScale(1, 1)
+		Effects.Pop(objectives)
+		Effects.Play("recompensa")
+		task.delay(TUTORIAL.doneHideSeconds, function()
+			objectives.Visible = false
+		end)
+		return
+	end
+	if current ~= lastObjective then
+		if lastObjective ~= 0 then
+			Effects.Pop(objectives) -- objetivo cumplido: salta el panel
+		end
+		lastObjective = current
+		objectivesTitle.Text = "🎯 Objetivo " .. current .. "/" .. #OBJECTIVES
+		objectivesText.Text = OBJECTIVES[current].text
+		objectivesFill.Size = UDim2.fromScale((current - 1) / #OBJECTIVES, 1)
+		objectives.Visible = true
+	end
+end
+
+-- Quien vuelve con la partida avanzada ya sabe atrapar y cobrar: sin pistas de principiante.
+local function onDataLoaded()
+	if critterCount() >= 2 or ((player:GetAttribute("MaxVault") :: number?) or 1) >= 2 or anyUpgrade() then
+		hasCaught = true
+		hasCollected = true
+	end
+	dataReady = true
+	refreshObjectives()
+end
+if player:GetAttribute("DataLoaded") == true then
+	task.defer(onDataLoaded)
+else
+	local loadedConnection: RBXScriptConnection? = nil
+	loadedConnection = player:GetAttributeChangedSignal("DataLoaded"):Connect(function()
+		if player:GetAttribute("DataLoaded") == true then
+			if loadedConnection then
+				loadedConnection:Disconnect()
+			end
+			onDataLoaded()
+		end
+	end)
+end
+
+task.spawn(function()
+	while not objectivesFinished do
+		refreshObjectives()
+		task.wait(0.5)
+	end
+end)
+
 -- ===================== Monedas =====================
 
 local currentCoins = 0
@@ -461,10 +657,34 @@ end
 Menus.Start()
 VaultDoors.Start()
 Ambience.Start()
+Performance.Start()
 CritterAnimator.Start()
 LiveHud.Start(gui, function(text: string, color: Color3?)
 	showToast(text, color)
 end)
+
+-- Franja de arriba: barra de la siguiente bóveda, debajo la pista (y el aviso de mutación rara en su
+-- sitio) y debajo el aviso. Se colocan en píxeles una debajo de otra, así no se pisan aunque los
+-- tamaños mínimos para móvil las hagan más altas de lo que daría la escala.
+local rareBanner = gui:FindFirstChild("AvisoMutacionRara") :: GuiObject?
+local TOP_GAP = 6
+local function layoutTop()
+	local y = TOP_GAP
+	nextFrame.AnchorPoint = Vector2.new(0.5, 0)
+	nextFrame.Position = UDim2.new(0.5, 0, 0, y)
+	y += nextFrame.AbsoluteSize.Y + TOP_GAP
+	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
+	hintLabel.Position = UDim2.new(0.5, 0, 0, y)
+	if rareBanner then
+		rareBanner.AnchorPoint = Vector2.new(0.5, 0)
+		rareBanner.Position = UDim2.new(0.5, 0, 0, y)
+	end
+	y += math.max(hintLabel.AbsoluteSize.Y, if rareBanner then rareBanner.AbsoluteSize.Y else 0) + TOP_GAP
+	toastLabel.AnchorPoint = Vector2.new(0.5, 0)
+	toastLabel.Position = UDim2.new(0.5, 0, 0, y)
+end
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTop)
+task.defer(layoutTop)
 
 local function tryCatch()
 	if minigame and not waitingResult then

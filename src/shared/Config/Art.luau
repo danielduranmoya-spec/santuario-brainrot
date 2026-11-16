@@ -54,9 +54,8 @@ Art.ambienceTweenSeconds = 2
 Art.critterDetail = 2
 
 -- Animaciones de los bichos (client/CritterAnimator).
+-- Fotogramas por segundo y distancia de animación: Art.performance.
 Art.animation = {
-	fps = 30, -- fotogramas por segundo de la animación (menos = más ligero en móvil)
-	maxDistance = 70, -- solo se animan los bichos a esta distancia de la cámara
 	speed = 3,
 	bobHeight = 0.04, -- balanceo, en proporción al tamaño del bicho
 	blinkEverySeconds = 4,
@@ -81,6 +80,22 @@ Art.animation = {
 	hueSeconds = 1, -- piezas "Arcoiris": cada cuánto cambian de color
 	headTurnSeconds = 6, -- piezas "Cabeza": una vuelta completa cada este tiempo
 	swingDegrees = 22, -- piezas "Pendulo"
+}
+
+-- Rendimiento en cada dispositivo (client/Performance). En "bajo detalle" (móviles y tablets, o
+-- calidad gráfica baja elegida a mano) el cliente quita los adornos pequeños de los bichos solo en su
+-- pantalla, gasta menos partículas, anima solo las piezas que se mueven (alas, colas...) y deja quieto
+-- el resto del cuerpo. Las partículas y luces de los bichos lejanos se apagan en todos los dispositivos.
+-- Medido con design/herramientas/vista_previa_bichos.py: 49 piezas por bicho de media (32 a 67);
+-- sin adornos, 37 (-25 %). Ver design/Rendimiento.md.
+Art.performance = {
+	lowDetailOnTouch = true, -- móviles y tablets van siempre en bajo detalle
+	lowDetailQualityLevel = 3, -- o si el jugador ha puesto la calidad gráfica en este nivel o menos
+	effectsDistance = { low = 55, high = 110 }, -- más lejos que esto, sin partículas ni luces
+	particleRateScale = { low = 0.5, high = 1 }, -- partículas por segundo (1 = las de Config)
+	animationFps = { low = 20, high = 30 },
+	animationDistance = { low = 45, high = 70 },
+	cullCheckSeconds = 0.5, -- cada cuánto se revisa qué bichos están cerca
 }
 
 -- Terreno del campo (WorldArt).
