@@ -16,6 +16,7 @@ UiStyle.Buttons = {
 	Mejoras = nil, -- botón lateral MEJORAS
 	Tienda = nil, -- botón lateral TIENDA
 	Codigos = nil, -- botón lateral CÓDIGOS
+	Indice = nil, -- botón lateral ÍNDICE (client/Bestiary)
 	Ahora = nil, -- ¡AHORA! (minijuego de captura)
 	Soltar = nil, -- SOLTAR (cuando llevas un bicho)
 	Valla = nil, -- VALLA (cuando te ponen un cebo)

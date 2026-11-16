@@ -12,7 +12,8 @@ local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Art = require(Config:WaitForChild("Art"))
 local MutationMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MutationMath"))
 
-local CritterArt = require(script.Parent:WaitForChild("CritterArt"))
+-- Está en Shared para que el cliente también pueda dibujar los modelos (índice de bichos).
+local CritterArt = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CritterArt"))
 
 type CritterDef = CrittersConfig.Critter
 

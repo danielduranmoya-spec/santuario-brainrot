@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Vista previa de los modelos de los bichos sin abrir Roblox Studio.
 
-Lee src/server/Services/CritterArt.luau, ejecuta su código con un intérprete de Lua (paquete
+Lee src/shared/CritterArt.luau, ejecuta su código con un intérprete de Lua (paquete
 `lupa`) y escribe design/herramientas/vista_previa_bichos.html: una página que dibuja los 21
 bichos en 3D en el navegador (con un deslizador para girarlos).
 
@@ -18,7 +18,7 @@ from pathlib import Path
 from lupa import lua54
 
 ROOT = Path(__file__).resolve().parents[2]
-ART = ROOT / "src/server/Services/CritterArt.luau"
+ART = ROOT / "src/shared/CritterArt.luau"
 CRITTERS = ROOT / "src/shared/Config/Critters.luau"
 GAMEPLAY = ROOT / "src/shared/Config/Gameplay.luau"
 OUT = Path(__file__).with_name("vista_previa_bichos.html")

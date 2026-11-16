@@ -153,6 +153,11 @@ local function processReceipt(info: { [string]: any }): Enum.ProductPurchaseDeci
 	end
 
 	table.insert(profile.receipts, purchaseId)
+	-- Ranking "más Robux gastados" (Services/Leaderboards).
+	local spent = tonumber(info.CurrencySpent)
+	if spent and spent > 0 then
+		profile.robuxSpent += math.floor(spent)
+	end
 	while #profile.receipts > Gameplay.Data.receiptHistory do
 		table.remove(profile.receipts, 1)
 	end
@@ -216,6 +221,10 @@ function Purchases.Start()
 		local name = passNameById[passId]
 		if purchased and name then
 			setPass(player, name, true)
+			local profile = Data.Get(player)
+			if profile then
+				profile.robuxSpent += Shop.GamePasses[name].price -- ranking de Robux gastados
+			end
 			markPurchase(player)
 			notify(player, "🎉 ¡Gracias! Ya tienes " .. Shop.GamePasses[name].title .. ".")
 			Remotes.Effect:FireClient(player, "recompensa")

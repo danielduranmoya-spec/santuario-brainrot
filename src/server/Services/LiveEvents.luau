@@ -52,6 +52,7 @@ local function runLegendary()
 	end
 	local nextAt = os.clock() + L.firstDelaySeconds
 	local warned = false
+	local publishedNextAt = 0
 	while true do
 		task.wait(0.5)
 		local now = os.clock()
@@ -73,6 +74,15 @@ local function runLegendary()
 			legendaryAlive = true
 			CritterSpawner.SpawnEvent(def, 1, LEGENDARY_TAG, L.lifetimeSeconds)
 			announce("⭐ ¡Ha aparecido el LEGENDARIO " .. def.name .. " en la Playa Rara! El primero que lo atrape se lo queda.", GOLD)
+		end
+		-- Para el stand del legendario (Services/EventStands): cuándo sale el próximo y si hay uno suelto.
+		local nextServerTime = math.floor(Workspace:GetServerTimeNow() + (nextAt - now))
+		if math.abs(nextServerTime - publishedNextAt) > 2 then
+			publishedNextAt = nextServerTime
+			ReplicatedStorage:SetAttribute("LegendaryNextAt", nextServerTime)
+		end
+		if ReplicatedStorage:GetAttribute("LegendaryAlive") ~= legendaryAlive then
+			ReplicatedStorage:SetAttribute("LegendaryAlive", legendaryAlive)
 		end
 	end
 end

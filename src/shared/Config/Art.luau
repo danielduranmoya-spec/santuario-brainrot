@@ -48,7 +48,7 @@ Art.ambience = {
 }
 Art.ambienceTweenSeconds = 2
 
--- Detalle de los modelos de los bichos (server/CritterArt): 2 = completo; 1 = sin los adornos
+-- Detalle de los modelos de los bichos (shared/CritterArt): 2 = completo; 1 = sin los adornos
 -- pequeños (cada bicho tiene entonces en torno a un tercio menos de piezas). Bájalo a 1 si el juego
 -- va lento en móviles modestos.
 Art.critterDetail = 2

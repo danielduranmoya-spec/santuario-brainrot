@@ -40,6 +40,10 @@ export type Profile = {
 	redeemedCodes: { string }, -- códigos de recompensa ya canjeados
 	funnelSteps: { string }, -- pasos de la analítica ya enviados (Config/Analytics)
 	hasPurchased: boolean, -- ha comprado algo con Robux alguna vez
+	discovered: { string }, -- bichos del índice ya atrapados alguna vez (ids)
+	indexClaimed: { string }, -- premios del índice ya dados ("rareza:Comun", "capturas:10")
+	totalCaught: number, -- capturas totales (ranking y premios del índice)
+	robuxSpent: number, -- Robux gastados en el juego (ranking)
 }
 
 type Callback = (Player, Profile) -> ()
@@ -110,6 +114,10 @@ local function defaultProfile(): Profile
 		redeemedCodes = {},
 		funnelSteps = {},
 		hasPurchased = false,
+		discovered = {},
+		indexClaimed = {},
+		totalCaught = 0,
+		robuxSpent = 0,
 	}
 end
 
@@ -157,14 +165,14 @@ local function reconcile(saved: any): Profile
 	if type(saved.starterPackBought) == "boolean" then
 		profile.starterPackBought = saved.starterPackBought
 	end
-	for _, field in { "baits", "luckUntil", "dailyStreak", "lastDailyDay", "fenceUntil", "lastStolenAt" } do
+	for _, field in { "baits", "luckUntil", "dailyStreak", "lastDailyDay", "fenceUntil", "lastStolenAt", "totalCaught", "robuxSpent" } do
 		local value = saved[field]
 		if type(value) == "number" and value == value then
 			(profile :: any)[field] = math.floor(value)
 		end
 	end
 	-- Listas de textos (compras, códigos, pasos de analítica): solo se copian los textos.
-	for _, field in { "receipts", "redeemedCodes", "funnelSteps" } do
+	for _, field in { "receipts", "redeemedCodes", "funnelSteps", "discovered", "indexClaimed" } do
 		local list = saved[field]
 		if type(list) == "table" then
 			for _, item in list do
@@ -290,6 +298,10 @@ function Data.Replicate(player: Player)
 	player:SetAttribute("LuckUntil", profile.luckUntil)
 	player:SetAttribute("DailyStreak", profile.dailyStreak)
 	player:SetAttribute("FenceUntil", profile.fenceUntil)
+	-- Índice de bichos (client/Bestiary).
+	player:SetAttribute("Discovered", table.concat(profile.discovered, ","))
+	player:SetAttribute("IndexClaimed", table.concat(profile.indexClaimed, ","))
+	player:SetAttribute("TotalCaught", profile.totalCaught)
 end
 
 function Data.Get(player: Player): Profile?
