@@ -7,9 +7,11 @@ local Progression = {}
 -- Las 4 primeras tienen nombre, temática y precio fijos; en cada una salen los bichos de su temática.
 Progression.Vaults = {
 	{ theme = "PlayaRara", name = "Playa Rara", unlockCost = 0 },
-	{ theme = "BosqueRuidoso", name = "Bosque Ruidoso", unlockCost = 2_500 },
-	{ theme = "VolcanTimido", name = "Volcán Tímido", unlockCost = 40_000 },
-	{ theme = "NubePegajosa", name = "Nube Pegajosa", unlockCost = 600_000 },
+	-- Ritmo simulado (jugador medio, ver design/Economia.md): bóveda 2 hacia el minuto 5 y la 3 hacia
+	-- el minuto 12, dentro de la primera sesión. Antes eran 2.500 / 40.000 / 600.000 (minutos 11 y 35).
+	{ theme = "BosqueRuidoso", name = "Bosque Ruidoso", unlockCost = 1_000 },
+	{ theme = "VolcanTimido", name = "Volcán Tímido", unlockCost = 18_000 },
+	{ theme = "NubePegajosa", name = "Nube Pegajosa", unlockCost = 300_000 },
 }
 
 -- A partir de la 5ª, las bóvedas se generan solas sin fin: la temática va rotando (Playa Rara II,

@@ -34,6 +34,11 @@ export type Profile = {
 	dailyStreak: number,
 	lastDailyDay: number, -- día (UTC) de la última recompensa diaria
 	receipts: { string }, -- últimas compras procesadas (para no darlas dos veces)
+	fenceUntil: number, -- os.time() hasta el que dura su valla (protege del cebo)
+	lastStolenAt: number, -- os.time() de la última vez que un cebo le quitó un bicho
+	redeemedCodes: { string }, -- códigos de recompensa ya canjeados
+	funnelSteps: { string }, -- pasos de la analítica ya enviados (Config/Analytics)
+	hasPurchased: boolean, -- ha comprado algo con Robux alguna vez
 }
 
 type Callback = (Player, Profile) -> ()
@@ -99,6 +104,11 @@ local function defaultProfile(): Profile
 		dailyStreak = 0,
 		lastDailyDay = -1,
 		receipts = {},
+		fenceUntil = 0,
+		lastStolenAt = 0,
+		redeemedCodes = {},
+		funnelSteps = {},
+		hasPurchased = false,
 	}
 end
 
@@ -144,18 +154,25 @@ local function reconcile(saved: any): Profile
 	if type(saved.starterPackBought) == "boolean" then
 		profile.starterPackBought = saved.starterPackBought
 	end
-	for _, field in { "baits", "luckUntil", "dailyStreak", "lastDailyDay" } do
+	for _, field in { "baits", "luckUntil", "dailyStreak", "lastDailyDay", "fenceUntil", "lastStolenAt" } do
 		local value = saved[field]
 		if type(value) == "number" and value == value then
 			(profile :: any)[field] = math.floor(value)
 		end
 	end
-	if type(saved.receipts) == "table" then
-		for _, receipt in saved.receipts do
-			if type(receipt) == "string" then
-				table.insert(profile.receipts, receipt)
+	-- Listas de textos (compras, códigos, pasos de analítica): solo se copian los textos.
+	for _, field in { "receipts", "redeemedCodes", "funnelSteps" } do
+		local list = saved[field]
+		if type(list) == "table" then
+			for _, item in list do
+				if type(item) == "string" then
+					table.insert((profile :: any)[field], item)
+				end
 			end
 		end
+	end
+	if type(saved.hasPurchased) == "boolean" then
+		profile.hasPurchased = saved.hasPurchased
 	end
 	return profile
 end
@@ -267,6 +284,7 @@ function Data.Replicate(player: Player)
 	player:SetAttribute("Baits", profile.baits)
 	player:SetAttribute("LuckUntil", profile.luckUntil)
 	player:SetAttribute("DailyStreak", profile.dailyStreak)
+	player:SetAttribute("FenceUntil", profile.fenceUntil)
 end
 
 function Data.Get(player: Player): Profile?

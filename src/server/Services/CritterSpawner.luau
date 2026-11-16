@@ -13,6 +13,10 @@
 --   2. El cliente solo dibuja la barra y, al pulsar, envía "intento" + el momento en que pulsó.
 --   3. El servidor recorta ese momento a una ventana corta antes de recibirlo y calcula él mismo dónde
 --      estaba la aguja con el tiempo de servidor (CatchBar). Si estaba en verde, lo atrapas.
+--
+-- Eventos (Services/LiveEvents): SpawnEvent crea bichos especiales (el legendario de servidor) que
+-- no cuentan para el tope de cada bóveda y tienen su propio tiempo de vida; SetSpawnBoost multiplica
+-- la aparición (Lluvia de Bichos). OnCaught/OnExpired avisan cuando se atrapan o se van.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,7 +35,10 @@ local CatchBar = require(Shared:WaitForChild("CatchBar"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
 local VaultMath = require(Shared:WaitForChild("VaultMath"))
 
+local Events = require(Config:WaitForChild("Events"))
+
 local Data = require(script.Parent:WaitForChild("Data"))
+local Analytics = require(script.Parent:WaitForChild("Analytics"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Vaults = require(script.Parent:WaitForChild("Vaults"))
@@ -52,6 +59,8 @@ type Wild = {
 	reservedFor: Player?, -- solo este jugador puede atraparlo (tutorial o Suerte x2)
 	isTutorial: boolean,
 	tween: Tween?,
+	eventTag: string?, -- bicho de evento ("legendario"): no cuenta para el tope de la bóveda
+	expiresAt: number?, -- os.clock() en el que se va (si no, Spawning.despawnSeconds)
 }
 
 type Minigame = {
@@ -89,6 +98,16 @@ local carrying: { [Player]: Carried } = {}
 local lastAction: { [Player]: number } = {}
 local tutorialGiven: { [Player]: boolean } = {}
 local luckCritter: { [Player]: Wild } = {}
+local lastHomeRequest: { [Player]: number } = {}
+
+-- Lluvia de Bichos: multiplicador de aparición y bicho exclusivo (o nada fuera del evento).
+local spawnMultiplier = 1
+local exclusiveDef: CritterDef? = nil
+local exclusiveChance = 0
+
+type CaughtCallback = (player: Player, def: CritterDef, eventTag: string?) -> ()
+local caughtCallbacks: { CaughtCallback } = {}
+local expiredCallbacks: { (def: CritterDef, eventTag: string) -> () } = {}
 
 local function getRoot(player: Player): BasePart?
 	local character = player.Character
@@ -116,7 +135,7 @@ end
 local function countWild(vault: number): number
 	local count = 0
 	for _, w in wild do
-		if w.vault == vault and w.reservedFor == nil then
+		if w.vault == vault and w.reservedFor == nil and w.eventTag == nil then
 			count += 1
 		end
 	end
@@ -286,6 +305,8 @@ local function spawnWild(def: CritterDef, vault: number, groundPosition: Vector3
 		reservedFor = reservedFor,
 		isTutorial = isTutorial,
 		tween = nil,
+		eventTag = nil,
+		expiresAt = nil,
 	}
 	refreshPrompt(w)
 	prompt.Triggered:Connect(function(player: Player)
@@ -324,7 +345,7 @@ local function startCarrying(player: Player, w: Wild): boolean
 
 	local part = w.part
 	w.prompt:Destroy()
-	for _, attribute in { "CritterUid", "LockedBy", "TutorialFor", "ReservedFor", "Vault", "Sleeping" } do
+	for _, attribute in { "CritterUid", "LockedBy", "TutorialFor", "ReservedFor", "Vault", "Sleeping", "EventTag" } do
 		part:SetAttribute(attribute, nil)
 	end
 	part:SetAttribute("Carried", true)
@@ -356,6 +377,10 @@ local function endMinigame(player: Player, success: boolean, failMessage: string
 		Remotes.CatchResult:FireClient(player, true, "¡Has atrapado: " .. w.def.name .. (if w.multiplier > 1 then " x" .. w.multiplier else "") .. "! Llévalo a tu santuario.")
 		Remotes.Effect:FireAllClients("captura", position, w.def.rarity) -- todos ven las chispas
 		Remotes.Effect:FireClient(player, "captura_mia")
+		Analytics.Step(player, "primera_captura")
+		for _, callback in caughtCallbacks do
+			task.spawn(callback, player, w.def, w.eventTag)
+		end
 		return
 	end
 
@@ -519,9 +544,18 @@ local function spawnLoop()
 		task.wait(Spawning.intervalSeconds)
 		if not DayNight.IsNight() then
 			local last = math.min(Vaults.Generated(), Vaults.HighestOpen() + 1)
+			-- Durante la Lluvia de Bichos caben más bichos y salen varios a la vez.
+			local cap = F.crittersPerVault * spawnMultiplier
 			for vault = 1, last do
-				if countWild(vault) < F.crittersPerVault then
+				for _ = 1, spawnMultiplier do
+					if countWild(vault) >= cap then
+						break
+					end
 					local def = pickCritter(VaultMath.critterPool(vault), VaultMath.luck(vault))
+					local exclusive = exclusiveDef
+					if exclusive and rng:NextNumber() < exclusiveChance then
+						def = exclusive
+					end
 					if def then
 						spawnWild(def, vault, randomSpawnPoint(vault), nil, false)
 					end
@@ -563,9 +597,16 @@ local function wanderLoop()
 			local now = os.clock()
 			for _, w in wild do
 				if w.lockedBy == nil and not w.isTutorial then
-					if now - w.spawnedAt > Spawning.despawnSeconds then
+					local expired = if w.expiresAt then now >= w.expiresAt else now - w.spawnedAt > Spawning.despawnSeconds
+					if expired then
 						removeWild(w)
 						w.part:Destroy()
+						local tag = w.eventTag
+						if tag then
+							for _, callback in expiredCallbacks do
+								task.spawn(callback, w.def, tag)
+							end
+						end
 					elseif rng:NextNumber() < Spawning.wanderChance then
 						-- Cuanto más raro, más rápido y más lejos corretea (Config/Gameplay.RarityMotion).
 						local motion = Gameplay.RarityMotion[w.def.rarity]
@@ -602,7 +643,20 @@ local function sendHomeAtNight(player: Player)
 	if player.Character then
 		player.Character:PivotTo(target)
 	end
-	notify(player, "🌙 Ha anochecido: has vuelto a tu santuario." .. saved)
+	notify(player, "🌙 Has vuelto a tu santuario." .. saved)
+end
+
+-- Botón CASA: solo de noche y desde una bóveda (de día hay que volver andando con el bicho).
+local function onGoHome(player: Player)
+	local now = os.clock()
+	if now - (lastHomeRequest[player] or 0) < Gameplay.Menus.goHomeCooldownSeconds then
+		return
+	end
+	lastHomeRequest[player] = now
+	if not DayNight.IsNight() then
+		return
+	end
+	sendHomeAtNight(player)
 end
 
 local function onNightChanged(night: boolean)
@@ -610,8 +664,11 @@ local function onNightChanged(night: boolean)
 		for player in minigames do
 			endMinigame(player, false, NIGHT_MESSAGE)
 		end
-		for _, player in Players:GetPlayers() do
-			task.spawn(sendHomeAtNight, player)
+		-- "forzado": todos a casa. "boton": cada uno vuelve cuando quiera con el botón CASA (GoHome).
+		if Events.DayNight.sendHome == "forzado" then
+			for _, player in Players:GetPlayers() do
+				task.spawn(sendHomeAtNight, player)
+			end
 		end
 	end
 	for _, w in wild do
@@ -682,13 +739,42 @@ local function onPlayerRemoving(player: Player)
 		end
 	end
 	lastAction[player] = nil
+	lastHomeRequest[player] = nil
 	tutorialGiven[player] = nil
 	luckCritter[player] = nil
+end
+
+-- Crea un bicho de evento en la bóveda `vault` (cualquiera que la tenga abierta puede atraparlo).
+-- Vive `lifetime` segundos; al atraparse o irse avisa por OnCaught / OnExpired con su `tag`.
+function CritterSpawner.SpawnEvent(def: CritterDef, vault: number, tag: string, lifetime: number): BasePart
+	local w = spawnWild(def, vault, randomSpawnPoint(vault), nil, false, 1)
+	w.eventTag = tag
+	w.expiresAt = os.clock() + lifetime
+	w.part:SetAttribute("EventTag", tag)
+	return w.part
+end
+
+function CritterSpawner.OnCaught(callback: CaughtCallback)
+	table.insert(caughtCallbacks, callback)
+end
+
+function CritterSpawner.OnExpired(callback: (def: CritterDef, eventTag: string) -> ())
+	table.insert(expiredCallbacks, callback)
+end
+
+-- Lluvia de Bichos: `multiplier` bichos a la vez (1 = normal) y, con probabilidad `chance`, el
+-- bicho exclusivo `exclusive` en lugar del normal.
+function CritterSpawner.SetSpawnBoost(multiplier: number, exclusive: CritterDef?, chance: number)
+	spawnMultiplier = math.max(1, math.floor(multiplier))
+	exclusiveDef = exclusive
+	exclusiveChance = chance
 end
 
 function CritterSpawner.Start()
 	Remotes.AttemptCatch.OnServerEvent:Connect(onAttemptCatch)
 	Remotes.ReleaseCarried.OnServerEvent:Connect(onReleaseCarried)
+	Remotes.GoHome.OnServerEvent:Connect(onGoHome)
+	ReplicatedStorage:SetAttribute("NightSendHome", Events.DayNight.sendHome)
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	for _, player in Players:GetPlayers() do

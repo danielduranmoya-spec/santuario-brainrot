@@ -9,6 +9,7 @@ export type Critter = {
 	rarity: Rarity,
 	coinsPerSecond: number,
 	zone: string,
+	eventOnly: boolean?, -- solo aparece en eventos (Lluvia de Bichos), nunca en las bóvedas normales
 }
 
 local Critters = {}
@@ -30,6 +31,8 @@ Critters.List = {
 	{ id = "cactus_estornudo", name = "Cactus Estornudo", rarity = "Raro", coinsPerSecond = 40, zone = "BosqueRuidoso" },
 	{ id = "roca_con_bigote", name = "Roca con Bigote", rarity = "Epico", coinsPerSecond = 300, zone = "VolcanTimido" },
 	{ id = "nube_grunona", name = "Nube Gruñona", rarity = "Legendario", coinsPerSecond = 2500, zone = "NubePegajosa" },
+	-- Exclusivo de la Lluvia de Bichos de los sábados (Config/Events.LluviaDeBichos).
+	{ id = "rana_paraguas", name = "Rana con Paraguas", rarity = "Epico", coinsPerSecond = 120, zone = "Evento", eventOnly = true },
 } :: { Critter }
 
 return Critters

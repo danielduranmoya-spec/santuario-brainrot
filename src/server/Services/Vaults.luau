@@ -23,6 +23,7 @@ local Economy = require(script.Parent:WaitForChild("Economy"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local WorldArt = require(script.Parent:WaitForChild("WorldArt"))
 local Boundary = require(script.Parent:WaitForChild("Boundary"))
+local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local F = Gameplay.Field
 local D = Gameplay.VaultDoor
@@ -108,6 +109,11 @@ local function tryUnlock(player: Player, n: number)
 	end
 	profile.maxVault = n
 	Data.Replicate(player)
+	if n == 2 then
+		Analytics.Step(player, "zona_2")
+	elseif n == 3 then
+		Analytics.Step(player, "zona_3")
+	end
 	local multiplier = VaultMath.valueMultiplier(n)
 	Remotes.Notify:FireClient(
 		player,

@@ -247,4 +247,37 @@ do -- Nube Gruñona: nube esponjosa con panza gris, rayo y gotas de lluvia, con 
 	CritterArt.nube_grunona = list
 end
 
+do -- Rana con Paraguas (exclusiva de la Lluvia de Bichos): rana verde sentada bajo un paraguas
+	-- amarillo de lunares, con botas de agua rojas y gotas cayendo del borde.
+	local green = Color3.fromRGB(95, 200, 90)
+	local belly = Color3.fromRGB(215, 245, 170)
+	local yellow = Color3.fromRGB(255, 210, 50)
+	local dots = Color3.fromRGB(255, 120, 60)
+	local list = {
+		p("Ellipsoid", v(0.72, 0.5, 0.62), v(0, -0.18, 0.02), green),
+		p("Ellipsoid", v(0.48, 0.34, 0.1), v(0, -0.2, -0.27), belly),
+		p("Ellipsoid", v(0.6, 0.36, 0.5), v(0, 0.08, -0.06), green),
+		p("Block", v(0.3, 0.035, 0.03), v(0, -0.01, -0.31), BLACK),
+		-- Paraguas: copa, mástil y puño.
+		p("Ellipsoid", v(1.05, 0.26, 1.05), v(0.08, 0.62, 0.06), yellow),
+		p("Ball", Vector3.one * 0.09, v(0.08, 0.77, 0.06), dots),
+		p("Ball", Vector3.one * 0.1, v(-0.25, 0.64, -0.2), dots),
+		p("Ball", Vector3.one * 0.1, v(0.38, 0.64, 0.25), dots),
+		p("Ball", Vector3.one * 0.1, v(0.3, 0.64, -0.28), dots),
+		p("Cylinder", v(0.56, 0.04, 0.04), v(0.24, 0.3, 0.02), Color3.fromRGB(120, 80, 50), v(0, 0, 90)),
+		named(p("Ball", Vector3.one * 0.07, v(-0.42, 0.42, 0.1), Color3.fromRGB(120, 180, 255), nil, Enum.Material.Glass), "Gota"),
+		named(p("Ball", Vector3.one * 0.06, v(0.55, 0.4, -0.1), Color3.fromRGB(120, 180, 255), nil, Enum.Material.Glass), "Gota"),
+	}
+	for _, side in { -1, 1 } do
+		-- Ojos saltones encima de la cabeza.
+		table.insert(list, p("Ball", Vector3.one * 0.2, v(side * 0.16, 0.25, -0.12), green))
+		-- Patas delanteras y botas de agua.
+		table.insert(list, p("Ellipsoid", v(0.12, 0.26, 0.12), v(side * 0.2, -0.32, -0.24), green))
+		table.insert(list, p("Ellipsoid", v(0.2, 0.14, 0.28), v(side * 0.24, -0.45, -0.1), Color3.fromRGB(220, 50, 50)))
+	end
+	eyes(list, 0.16, 0.29, -0.2, 0.13, green)
+	cheeks(list, 0.22, -0.02, -0.27, 0.08)
+	CritterArt.rana_paraguas = list
+end
+
 return CritterArt

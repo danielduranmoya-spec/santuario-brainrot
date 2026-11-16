@@ -26,7 +26,7 @@ Shop.DevProducts = {
 		baits = 5,
 		critterRarity = "Raro",
 	},
-	Cebo = { id = 0, price = 25, title = "Cebo", description = "Atrae bichos de otros santuarios (próximamente)", baits = 1 },
+	Cebo = { id = 0, price = 25, title = "Cebo", description = "Ponlo en la entrada de otro santuario: atrae uno de sus bichos", baits = 1 },
 	SuerteX2 = { id = 0, price = 49, durationSeconds = 15 * 60, title = "Suerte x2", description = "15 min con bichos raros reservados para ti" },
 }
 
@@ -42,4 +42,11 @@ Shop.Perks = {
 
 Shop.PrivateServerPrice = 99
 
+-- Suscripción de Roblox (en el código de Roblox se llama "Premium"). Roblox paga al creador por el
+-- tiempo que juegan los suscriptores, así que conviene darles una ventaja pequeña y ofrecerla
+-- después de un logro, nunca al entrar (GDD).
+Shop.Premium = {
+	incomeBonus = 0.1, -- +10 % de monedas para los suscriptores
+	offerAfterStep = "zona_2", -- se ofrece una sola vez, al abrir por primera vez la bóveda 2 (Config/Analytics)
+}
 return Shop

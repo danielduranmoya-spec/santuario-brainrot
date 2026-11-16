@@ -4,6 +4,8 @@
 --   * Los productos se conceden SOLO en MarketplaceService.ProcessReceipt, de forma idempotente:
 --     cada compra (PurchaseId) se apunta en el perfil y nunca se da dos veces.
 --   * Si un id es 0 (aún no creado en el Creator Hub), la tienda avisa en lugar de romperse.
+--   * Suscripción de Roblox (Premium): se ofrece una sola vez, tras un logro (Config/Shop.Premium),
+--     nunca al entrar, y solo a quien no la tiene.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -18,12 +20,14 @@ local Shop = require(Config:WaitForChild("Shop"))
 local Data = require(script.Parent:WaitForChild("Data"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local NOT_CONFIGURED = "Este producto aún no está a la venta (falta su ID en src/shared/Config/Shop.luau)."
 
 local Purchases = {}
 
 local joinedAt: { [Player]: number } = {}
+local premiumOffered: { [Player]: boolean } = {}
 local lastAction: { [Player]: number } = {}
 
 local productNameById: { [number]: string } = {}
@@ -50,8 +54,16 @@ end
 
 local function setPass(player: Player, name: string, owned: boolean)
 	player:SetAttribute("Pass_" .. name, owned)
-	if name == "VIP" then
-		Plots.Refresh(player)
+	-- VIP cambia los huecos y x2 Monedas lo que generas: se redibuja el santuario.
+	Plots.Refresh(player)
+end
+
+-- Primera compra con Robux del jugador (analítica, una vez en toda su vida).
+local function markPurchase(player: Player)
+	local profile = Data.Get(player)
+	if profile and not profile.hasPurchased then
+		profile.hasPurchased = true
+		Analytics.Custom(player, "primera_compra")
 	end
 end
 
@@ -134,6 +146,7 @@ local function processReceipt(info: { [string]: any }): Enum.ProductPurchaseDeci
 	while #profile.receipts > Gameplay.Data.receiptHistory do
 		table.remove(profile.receipts, 1)
 	end
+	markPurchase(player)
 	Data.Replicate(player)
 
 	-- Guardamos ya: si no se puede, Roblox volverá a llamar y el recibo apuntado evita darlo dos veces.
@@ -193,6 +206,7 @@ function Purchases.Start()
 		local name = passNameById[passId]
 		if purchased and name then
 			setPass(player, name, true)
+			markPurchase(player)
 			notify(player, "🎉 ¡Gracias! Ya tienes " .. Shop.GamePasses[name].title .. ".")
 			Remotes.Effect:FireClient(player, "recompensa")
 		end
@@ -209,6 +223,28 @@ function Purchases.Start()
 	Players.PlayerRemoving:Connect(function(player)
 		joinedAt[player] = nil
 		lastAction[player] = nil
+		premiumOffered[player] = nil
+	end)
+
+	-- Oferta de la suscripción de Roblox tras el logro de Config/Shop.Premium.offerAfterStep.
+	Analytics.OnStep(function(player, step)
+		if step ~= Shop.Premium.offerAfterStep or premiumOffered[player] then
+			return
+		end
+		if player.MembershipType == Enum.MembershipType.Premium then
+			return
+		end
+		premiumOffered[player] = true
+		notify(player, "⭐ Con Roblox Premium ganas un " .. math.floor(Shop.Premium.incomeBonus * 100) .. " % más de monedas.")
+		task.wait(2) -- que primero vea el aviso de la bóveda abierta
+		if player.Parent then
+			local ok, err = pcall(function()
+				MarketplaceService:PromptPremiumPurchase(player)
+			end)
+			if not ok then
+				warn("[Purchases] No se pudo ofrecer Premium: " .. tostring(err))
+			end
+		end
 	end)
 	Data.OnLoaded(function(player)
 		checkPasses(player)

@@ -18,8 +18,9 @@ Gameplay.Field = {
 	hubLength = 200, -- largo de la plaza de santuarios (de startZ a startZ + hubLength)
 	spawn = Vector3.new(0, 0, 60), -- punto de aparición (en la plaza, entre los santuarios)
 	vaultLength = 100, -- largo de cada bóveda
-	initialVaults = 6, -- bóvedas construidas al arrancar el servidor
-	aheadVaults = 3, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
+	-- Menos bóvedas construidas de antemano = menos piezas (va más fluido en móvil). Antes 6 y 3.
+	initialVaults = 4, -- bóvedas construidas al arrancar el servidor
+	aheadVaults = 2, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
 	crittersPerVault = 6, -- bichos salvajes a la vez en cada bóveda
 	edgeMargin = 10, -- los bichos no aparecen pegados a muros ni puertas
 }
@@ -81,6 +82,11 @@ Gameplay.Sanctuary = {
 	collectCheckSeconds = 0.2,
 	coinTickSeconds = 1,
 	labelMaxDistance = 120,
+	-- Si el santuario está lleno y traes un bicho que genera más que el más flojo, lo sustituye y el
+	-- flojo se vende por sellValueSeconds segundos de lo que generaba. Así siempre merece la pena
+	-- atrapar bichos mejores, aunque no tengas huecos libres.
+	autoReplaceWeakest = true,
+	sellValueSeconds = 30,
 }
 
 Gameplay.Data = {
@@ -98,7 +104,10 @@ Gameplay.Data = {
 Gameplay.Menus = {
 	upgradesAfterCritters = 1, -- el botón MEJORAS sale al tener este número de bichos en el santuario
 	shopAfterSeconds = 60, -- GDD: nada de tiendas antes del primer minuto
+	codesAfterSeconds = 60, -- el botón CÓDIGOS, también tras el primer minuto
 	actionCooldownSeconds = 0.3,
+	codeCooldownSeconds = 2, -- entre intentos de canjear un código
+	goHomeCooldownSeconds = 5,
 }
 
 -- Brillo de cada rareza: alcance de la luz (0 = sin luz) y chispas por segundo (0 = sin chispas).

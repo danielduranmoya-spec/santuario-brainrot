@@ -22,6 +22,8 @@ local VaultMath = require(Shared:WaitForChild("VaultMath"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local Ambience = require(script.Parent:WaitForChild("Ambience"))
 local CritterAnimator = require(script.Parent:WaitForChild("CritterAnimator"))
+local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
+local LiveHud = require(script.Parent:WaitForChild("LiveHud"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StartMinigame = remotes:WaitForChild("StartMinigame") :: RemoteEvent
@@ -83,23 +85,17 @@ local function newLabel(name: string, size: UDim2, position: UDim2, parent: Inst
 	return label
 end
 
+-- El estilo de cada botón sale de Config/UiStyle (su nombre `name` es la clave).
 local function newButton(name: string, size: UDim2, position: UDim2, color: Color3): TextButton
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.Size = size
 	button.Position = position
-	button.BackgroundColor3 = color
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.Font = Enum.Font.GothamBlack
 	button.TextScaled = true
 	button.Visible = false
 	button.Parent = gui
-	addCorner(button)
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 3
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = button
+	ButtonStyle.text(button, name, color)
 	local limit = Instance.new("UISizeConstraint")
 	limit.MaxSize = Vector2.new(420, 130)
 	limit.Parent = button
@@ -481,6 +477,9 @@ Menus.Start()
 VaultDoors.Start()
 Ambience.Start()
 CritterAnimator.Start()
+LiveHud.Start(gui, function(text: string, color: Color3?)
+	showToast(text, color)
+end)
 
 local function tryCatch()
 	if minigame and not waitingResult then
@@ -555,7 +554,8 @@ RunService.RenderStepped:Connect(function()
 	if warningNow and not nightWarned then
 		nightWarned = true
 		Effects.Play("alerta_noche")
-		showToast("⚠ ¡Anochece en " .. left .. " segundos! Los bichos se dormirán y volverás a tu santuario.", COLOR_BAD)
+		local forced = ReplicatedStorage:GetAttribute("NightSendHome") == "forzado"
+		showToast("⚠ ¡Anochece en " .. left .. " segundos! Los bichos se dormirán" .. (if forced then " y volverás a tu santuario." else "."), COLOR_BAD)
 	elseif not warningNow then
 		nightWarned = false
 	end
@@ -563,7 +563,7 @@ RunService.RenderStepped:Connect(function()
 
 	local hint: string? = nil
 	if night then
-		hint = "🌙 Los bichos duermen: espera a que amanezca (" .. clock .. ")"
+		hint = "🌙 Los bichos duermen: cobra en tu santuario o espera a que amanezca (" .. clock .. ")"
 	elseif carrying then
 		hint = "🏠 Lleva el bicho a tu santuario (sigue el rayo amarillo)"
 	elseif not hasCaught then

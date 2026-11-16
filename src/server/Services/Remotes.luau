@@ -20,11 +20,15 @@ local Remotes = {
 	CatchResult = newEvent("CatchResult"), -- (acierto: boolean, mensaje: string)
 	Notify = newEvent("Notify"), -- (mensaje: string)
 	Effect = newEvent("Effect"), -- (tipo: string, posición: Vector3?, dato: any) solo efectos visuales/sonido
+	Announce = newEvent("Announce"), -- (texto: string, color: Color3?) aviso para todos, también en el chat
 	-- cliente -> servidor
 	AttemptCatch = newEvent("AttemptCatch"), -- (momento en tiempo de servidor: number)
 	ReleaseCarried = newEvent("ReleaseCarried"), -- ()
 	BuyUpgrade = newEvent("BuyUpgrade"), -- (nombre de la mejora: string)
 	PromptPurchase = newEvent("PromptPurchase"), -- (tipo: "pass" | "product", nombre: string)
+	RedeemCode = newEvent("RedeemCode"), -- (código: string)
+	BuyFence = newEvent("BuyFence"), -- ()
+	GoHome = newEvent("GoHome"), -- () de noche, volver al santuario
 }
 
 folder.Parent = ReplicatedStorage

@@ -87,6 +87,9 @@ function VaultMath.critterPool(n: number): { CrittersConfig.Critter }
 	local pool = {}
 	local theme = VaultMath.theme(n)
 	for _, def in CrittersConfig.List do
+		if def.eventOnly then
+			continue -- los bichos de evento solo salen durante su evento
+		end
 		if n > #NAMED or def.zone == theme then
 			table.insert(pool, def)
 		end

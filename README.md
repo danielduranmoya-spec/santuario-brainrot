@@ -23,3 +23,22 @@ Si al principio Rojo te resulta demasiado, puedes empezar con Script Sync de Stu
 - [ ] Semanas 9–10: mejoras, guardado de datos, tienda
 - [ ] Semana 11: arte low-poly, sonido, efectos
 - [ ] Semana 12: miniaturas (3 versiones), pruebas en móvil, errores
+
+## Pendientes antes del lanzamiento (resueltos en código)
+
+- Legendario de servidor cada 8 min, Lluvia de Bichos de los sábados con bicho exclusivo, robo amable con cebo y valla, códigos de recompensa, oferta de Roblox Premium, analítica del embudo, botón CASA de noche y ritmo de la economía ([`design/Economia.md`](design/Economia.md)).
+- Tres estilos de botón para elegir en [`src/shared/Config/UiStyle.luau`](src/shared/Config/UiStyle.luau): "Caramelo", "Pegatina" y "Neon", para todos o botón a botón.
+
+### Comandos de prueba en Studio (barra de comandos, con el juego en marcha en modo servidor)
+
+```lua
+local SS = game:GetService("ServerStorage")
+local yo = game.Players:GetPlayers()[1]
+SS.DebugDarMonedas:Invoke(yo, 50000)   -- monedas
+SS.DebugNoche:Invoke(true)             -- noche ya (false = día)
+SS.DebugLegendario:Invoke()            -- legendario en 15 s
+SS.DebugLluvia:Invoke(true)            -- Lluvia de Bichos ya (false = termina, nil = horario normal)
+SS.DebugCrearBicho:Invoke(yo, "rana_paraguas")
+```
+
+Para probar el cebo hacen falta dos jugadores: pestaña Prueba > Clientes y servidores > 2 jugadores > Iniciar. Prueba el código BICHOS para conseguir un cebo.

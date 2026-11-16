@@ -1,6 +1,7 @@
 --!strict
--- Menús de MEJORAS y TIENDA (pensados para móvil: botones grandes y tamaños en escala).
+-- Menús de MEJORAS, TIENDA y CÓDIGOS (pensados para móvil: botones grandes y tamaños en escala).
 -- Solo enseñan datos (atributos del jugador y leaderstats) y piden compras al servidor.
+-- El aspecto de los botones sale de Config/UiStyle (tres estilos para elegir, ver ButtonStyle).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,13 +13,16 @@ local Config = Shared:WaitForChild("Config")
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Progression = require(Config:WaitForChild("Progression"))
 local Shop = require(Config:WaitForChild("Shop"))
+local UiStyle = require(Config:WaitForChild("UiStyle"))
 local Format = require(Shared:WaitForChild("Format"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
+local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local BuyUpgrade = remotes:WaitForChild("BuyUpgrade") :: RemoteEvent
 local PromptPurchase = remotes:WaitForChild("PromptPurchase") :: RemoteEvent
+local RedeemCode = remotes:WaitForChild("RedeemCode") :: RemoteEvent
 
 local COLOR_DARK = Color3.fromRGB(25, 25, 35)
 local COLOR_PANEL = Color3.fromRGB(40, 40, 55)
@@ -50,17 +54,15 @@ local function newText(parent: Instance, size: UDim2, position: UDim2, text: str
 	return label
 end
 
-local function newButton(parent: Instance, size: UDim2, position: UDim2, color: Color3, text: string): TextButton
+-- `key` es el nombre del botón en Config/UiStyle.Buttons (decide su estilo).
+local function newButton(parent: Instance, size: UDim2, position: UDim2, color: Color3, text: string, key: string): TextButton
 	local button = Instance.new("TextButton")
 	button.Size = size
 	button.Position = position
-	button.BackgroundColor3 = color
-	button.Font = Enum.Font.GothamBlack
 	button.TextScaled = true
-	button.TextColor3 = Color3.new(1, 1, 1)
 	button.Text = text
 	button.Parent = parent
-	addCorner(button)
+	ButtonStyle.text(button, key, color)
 	Effects.BindButton(button)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingTop = UDim.new(0.18, 0)
@@ -96,7 +98,7 @@ local function newPanel(gui: ScreenGui, title: string): (Frame, ScrollingFrame)
 	local titleLabel = newText(panel, UDim2.fromScale(0.75, 0.1), UDim2.fromScale(0.04, 0.02), title)
 	titleLabel.Font = Enum.Font.GothamBlack
 
-	local close = newButton(panel, UDim2.fromScale(0.14, 0.1), UDim2.fromScale(0.84, 0.02), Color3.fromRGB(230, 80, 70), "X")
+	local close = newButton(panel, UDim2.fromScale(0.14, 0.1), UDim2.fromScale(0.84, 0.02), Color3.fromRGB(230, 80, 70), "X", "Cerrar")
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
@@ -213,32 +215,94 @@ local function drawShopIcon(area: Frame)
 	sparkle(area, UDim2.fromScale(0.86, 0.22), 0.2, Color3.fromRGB(255, 240, 150))
 end
 
--- Botón lateral con icono: degradado, contorno, sombra, nombre debajo, aviso "!" y un leve
--- balanceo del icono; crece un poco al pasar el ratón y bota al pulsarlo (Effects.BindButton).
-local function iconButton(parent: Instance, label: string, top: Color3, bottom: Color3, draw: (Frame) -> ()): (TextButton, Frame)
+-- Códigos: regalo con lazo y una etiqueta con "#".
+local function drawCodesIcon(area: Frame)
+	local dark = Color3.fromRGB(110, 40, 10)
+	local box = frame(area, UDim2.fromScale(0.62, 0.46), UDim2.fromScale(0.46, 0.66), Color3.fromRGB(255, 150, 50))
+	round(box, 0.15)
+	gradient(box, Color3.fromRGB(255, 190, 90), Color3.fromRGB(235, 110, 30))
+	outline(box, dark, 2)
+	local lid = frame(area, UDim2.fromScale(0.72, 0.16), UDim2.fromScale(0.46, 0.4), Color3.fromRGB(255, 120, 40))
+	round(lid, 0.3)
+	outline(lid, dark, 2)
+	local ribbon = frame(area, UDim2.fromScale(0.14, 0.62), UDim2.fromScale(0.46, 0.6), Color3.fromRGB(255, 240, 120))
+	ribbon.ZIndex = lid.ZIndex + 1
+	for _, side in { -1, 1 } do
+		local loop = frame(area, UDim2.fromScale(0.2, 0.2), UDim2.fromScale(0.46 + side * 0.11, 0.26), Color3.fromRGB(255, 240, 120))
+		loop.SizeConstraint = Enum.SizeConstraint.RelativeXX
+		loop.Rotation = side * 30
+		round(loop, 0.5)
+		outline(loop, dark, 2)
+	end
+	local tag = frame(area, UDim2.fromScale(0.34, 0.34), UDim2.fromScale(0.78, 0.8), Color3.fromRGB(255, 255, 255))
+	tag.SizeConstraint = Enum.SizeConstraint.RelativeXX
+	round(tag, 0.3)
+	outline(tag, dark, 2)
+	local mark = Instance.new("TextLabel")
+	mark.Size = UDim2.fromScale(1, 1)
+	mark.BackgroundTransparency = 1
+	mark.Font = Enum.Font.GothamBlack
+	mark.TextScaled = true
+	mark.TextColor3 = dark
+	mark.Text = "#"
+	mark.Parent = tag
+	sparkle(area, UDim2.fromScale(0.14, 0.24), 0.18, Color3.fromRGB(255, 255, 255))
+end
+
+-- Botón lateral con icono, nombre debajo, aviso "!" y un leve balanceo del icono; crece un poco al
+-- pasar el ratón y bota al pulsarlo. Su aspecto depende del estilo (Config/UiStyle, clave `key`):
+--   Caramelo: degradado, contorno oscuro, relieve abajo y brillo arriba.
+--   Pegatina: color plano, borde blanco grueso, letra de cómic e inclinado.
+--   Neon: fondo oscuro translúcido con borde y nombre del color del botón.
+local function iconButton(parent: Instance, label: string, key: string, top: Color3, bottom: Color3, draw: (Frame) -> ()): (TextButton, Frame)
+	local style = UiStyle.styleFor(key)
 	local button = Instance.new("TextButton")
-	button.Name = "Boton" .. label
-	button.Size = UDim2.fromScale(1, 0.48)
+	button.Name = "Boton" .. key
+	button.Size = UDim2.fromScale(1, 0.3)
 	button.Text = ""
 	button.AutoButtonColor = false
 	button.BackgroundColor3 = top
+	button:SetAttribute("EstiloBoton", style)
 	button.Parent = parent
 	-- El alto manda (cabe siempre en la columna) y el ancho sale de la proporción.
 	local ratio = Instance.new("UIAspectRatioConstraint")
 	ratio.AspectRatio = 0.85
 	ratio.DominantAxis = Enum.DominantAxis.Height
 	ratio.Parent = button
-	round(button, 0.22)
-	gradient(button, top, bottom)
-	outline(button, Color3.fromRGB(20, 20, 30), 3)
 
-	-- Relieve: franja oscura abajo (como un botón que sobresale) y brillo en la mitad de arriba.
-	local base = frame(button, UDim2.fromScale(1, 0.12), UDim2.fromScale(0.5, 0.94), Color3.fromRGB(0, 0, 0))
-	base.BackgroundTransparency = 0.65
-	round(base, 0.5)
-	local shine = frame(button, UDim2.fromScale(0.86, 0.3), UDim2.fromScale(0.5, 0.2), Color3.fromRGB(255, 255, 255))
-	shine.BackgroundTransparency = 0.82
-	round(shine, 0.5)
+	local labelColor = Color3.new(1, 1, 1)
+	local labelStroke = Color3.fromRGB(20, 20, 30)
+	if style == "Caramelo" then
+		round(button, 0.22)
+		gradient(button, top, bottom)
+		outline(button, Color3.fromRGB(20, 20, 30), 3)
+		-- Relieve: franja oscura abajo (como un botón que sobresale) y brillo en la mitad de arriba.
+		local base = frame(button, UDim2.fromScale(1, 0.12), UDim2.fromScale(0.5, 0.94), Color3.fromRGB(0, 0, 0))
+		base.BackgroundTransparency = 0.65
+		round(base, 0.5)
+		local shine = frame(button, UDim2.fromScale(0.86, 0.3), UDim2.fromScale(0.5, 0.2), Color3.fromRGB(255, 255, 255))
+		shine.BackgroundTransparency = 0.82
+		round(shine, 0.5)
+	elseif style == "Pegatina" then
+		round(button, 0.32)
+		outline(button, Color3.new(1, 1, 1), 4)
+		button.Rotation = if key == "Tienda" then 3 else -3
+	else -- Neon
+		round(button, 0.2)
+		button.BackgroundColor3 = Color3.fromRGB(18, 16, 30)
+		button.BackgroundTransparency = 0.25
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 3
+		stroke.Color = Color3.new(1, 1, 1)
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Parent = button
+		local strokeGradient = Instance.new("UIGradient")
+		strokeGradient.Color = ColorSequence.new(top, bottom)
+		strokeGradient.Rotation = 90
+		strokeGradient.Parent = stroke
+		labelColor = top:Lerp(Color3.new(1, 1, 1), 0.35)
+		labelStroke = Color3.fromRGB(0, 0, 0)
+	end
 
 	local area = frame(button, UDim2.fromScale(0.8, 0.62), UDim2.fromScale(0.5, 0.4), Color3.new(1, 1, 1))
 	area.BackgroundTransparency = 1
@@ -249,14 +313,14 @@ local function iconButton(parent: Instance, label: string, top: Color3, bottom: 
 	text.Position = UDim2.fromScale(0.5, 0.86)
 	text.AnchorPoint = Vector2.new(0.5, 0.5)
 	text.BackgroundTransparency = 1
-	text.Font = Enum.Font.GothamBlack
+	text.Font = UiStyle.Fonts[style]
 	text.TextScaled = true
-	text.TextColor3 = Color3.new(1, 1, 1)
+	text.TextColor3 = labelColor
 	text.Text = label
 	text.Parent = button
 	local textStroke = Instance.new("UIStroke")
 	textStroke.Thickness = 2
-	textStroke.Color = Color3.fromRGB(20, 20, 30)
+	textStroke.Color = labelStroke
 	textStroke.Parent = text
 
 	-- Aviso "!" (por ejemplo, cuando puedes pagar una mejora).
@@ -307,7 +371,7 @@ local function newRow(list: ScrollingFrame, order: number): Row
 	local detail = newText(frame, UDim2.fromScale(0.6, 0.35), UDim2.fromScale(0.03, 0.56), "")
 	detail.Font = Enum.Font.Gotham
 	detail.TextColor3 = Color3.fromRGB(210, 210, 220)
-	local button = newButton(frame, UDim2.fromScale(0.33, 0.76), UDim2.fromScale(0.65, 0.12), COLOR_GOOD, "")
+	local button = newButton(frame, UDim2.fromScale(0.33, 0.76), UDim2.fromScale(0.65, 0.12), COLOR_GOOD, "", "Comprar")
 	return { frame = frame, title = title, detail = detail, button = button }
 end
 
@@ -326,42 +390,103 @@ function Menus.Start()
 	-- Arriba a la izquierda, bajo la barra de Roblox: deja libre la esquina de abajo para la cartera.
 	side.AnchorPoint = Vector2.new(0, 0)
 	side.Position = UDim2.new(0, 12, 0, 54)
-	side.Size = UDim2.new(0.12, 0, 0.48, 0)
+	side.Size = UDim2.new(0.12, 0, 0.66, 0)
 	side.BackgroundTransparency = 1
 	side.Parent = gui
 	local sideLimit = Instance.new("UISizeConstraint")
-	sideLimit.MaxSize = Vector2.new(120, 270)
+	sideLimit.MaxSize = Vector2.new(120, 380)
 	sideLimit.Parent = side
 	local sideLayout = Instance.new("UIListLayout")
 	sideLayout.Padding = UDim.new(0.04, 0)
 	sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	sideLayout.Parent = side
 
-	local upgradesButton, upgradesBadge = iconButton(side, "MEJORAS", COLOR_GOOD, Color3.fromRGB(30, 130, 50), drawUpgradeIcon)
+	local upgradesButton, upgradesBadge = iconButton(side, "MEJORAS", "Mejoras", COLOR_GOOD, Color3.fromRGB(30, 130, 50), drawUpgradeIcon)
 	upgradesButton.LayoutOrder = 1
 	upgradesButton.Visible = false
-	local shopButton, shopBadge = iconButton(side, "TIENDA", Color3.fromRGB(120, 90, 255), Color3.fromRGB(60, 40, 170), drawShopIcon)
+	local shopButton, shopBadge = iconButton(side, "TIENDA", "Tienda", Color3.fromRGB(120, 90, 255), Color3.fromRGB(60, 40, 170), drawShopIcon)
 	shopButton.LayoutOrder = 2
 	shopButton.Visible = false
 	shopBadge.Visible = false
+	local codesButton, codesBadge = iconButton(side, "CÓDIGOS", "Codigos", Color3.fromRGB(255, 150, 50), Color3.fromRGB(210, 90, 20), drawCodesIcon)
+	codesButton.LayoutOrder = 3
+	codesButton.Visible = false
+	codesBadge.Visible = false
 
 	local upgradesPanel, upgradesList = newPanel(gui, "Mejoras")
 	local shopPanel, shopList = newPanel(gui, "Tienda")
+	local codesPanel, codesList = newPanel(gui, "Códigos")
+	local panels = { upgradesPanel, shopPanel, codesPanel }
 
-	upgradesButton.Activated:Connect(function()
-		shopPanel.Visible = false
-		upgradesPanel.Visible = not upgradesPanel.Visible
-		if upgradesPanel.Visible then
-			Effects.Pop(upgradesPanel)
+	-- Abre un panel y cierra los demás (o lo cierra si ya estaba abierto).
+	local function toggle(panel: Frame)
+		for _, other in panels do
+			if other ~= panel then
+				other.Visible = false
+			end
 		end
+		panel.Visible = not panel.Visible
+		if panel.Visible then
+			Effects.Pop(panel)
+		end
+	end
+	upgradesButton.Activated:Connect(function()
+		toggle(upgradesPanel)
 	end)
 	shopButton.Activated:Connect(function()
-		upgradesPanel.Visible = false
-		shopPanel.Visible = not shopPanel.Visible
-		if shopPanel.Visible then
-			Effects.Pop(shopPanel)
+		toggle(shopPanel)
+	end)
+	codesButton.Activated:Connect(function()
+		toggle(codesPanel)
+	end)
+
+	-- ===== Códigos =====
+	-- Caja de texto y botón CANJEAR. El servidor comprueba el código y avisa del resultado.
+	local codesHelp = newText(codesList, UDim2.new(1, -12, 0, ROW_HEIGHT * 0.6), UDim2.new(), "Escribe un código de recompensa:")
+	codesHelp.LayoutOrder = 1
+	codesHelp.TextXAlignment = Enum.TextXAlignment.Center
+	local codesRow = Instance.new("Frame")
+	codesRow.Size = UDim2.new(1, -12, 0, ROW_HEIGHT)
+	codesRow.BackgroundColor3 = COLOR_DARK
+	codesRow.LayoutOrder = 2
+	codesRow.Parent = codesList
+	addCorner(codesRow, 0.15)
+	local codeBox = Instance.new("TextBox")
+	codeBox.Size = UDim2.fromScale(0.58, 0.7)
+	codeBox.Position = UDim2.fromScale(0.03, 0.15)
+	codeBox.BackgroundColor3 = Color3.fromRGB(245, 245, 250)
+	codeBox.TextColor3 = Color3.fromRGB(25, 25, 35)
+	codeBox.PlaceholderText = "CÓDIGO"
+	codeBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+	codeBox.Font = Enum.Font.GothamBold
+	codeBox.TextScaled = true
+	codeBox.ClearTextOnFocus = false
+	codeBox.Text = ""
+	codeBox.Parent = codesRow
+	addCorner(codeBox, 0.2)
+	local codePadding = Instance.new("UIPadding")
+	codePadding.PaddingTop = UDim.new(0.2, 0)
+	codePadding.PaddingBottom = UDim.new(0.2, 0)
+	codePadding.PaddingLeft = UDim.new(0.04, 0)
+	codePadding.Parent = codeBox
+	local redeemButton = newButton(codesRow, UDim2.fromScale(0.33, 0.76), UDim2.fromScale(0.64, 0.12), Color3.fromRGB(255, 150, 50), "CANJEAR", "Canjear")
+	local function redeem()
+		local code = codeBox.Text
+		if #code > 0 then
+			RedeemCode:FireServer(code)
+		end
+	end
+	redeemButton.Activated:Connect(redeem)
+	codeBox.FocusLost:Connect(function(enterPressed: boolean)
+		if enterPressed then
+			redeem()
 		end
 	end)
+	local codesTip = newText(codesList, UDim2.new(1, -12, 0, ROW_HEIGHT * 0.5), UDim2.new(), "Síguenos: con cada actualización hay códigos nuevos.")
+	codesTip.LayoutOrder = 3
+	codesTip.Font = Enum.Font.Gotham
+	codesTip.TextColor3 = Color3.fromRGB(210, 210, 220)
+	codesTip.TextXAlignment = Enum.TextXAlignment.Center
 
 	-- ===== Mejoras =====
 	local upgradeRows: { [string]: Row } = {}
@@ -391,12 +516,12 @@ function Menus.Start()
 			if level >= def.maxLevel then
 				row.detail.Text = def.description .. ": " .. UpgradeMath.effectText(name, level)
 				row.button.Text = "MÁX"
-				row.button.BackgroundColor3 = COLOR_OFF
+				ButtonStyle.setColor(row.button, COLOR_OFF)
 			else
 				local cost = UpgradeMath.cost(name, level + 1)
 				row.detail.Text = UpgradeMath.effectText(name, level) .. " → " .. UpgradeMath.effectText(name, level + 1)
 				row.button.Text = "💰 " .. Format.number(cost)
-				row.button.BackgroundColor3 = if coins >= cost then COLOR_GOOD else COLOR_OFF
+				ButtonStyle.setColor(row.button, if coins >= cost then COLOR_GOOD else COLOR_OFF)
 			end
 		end
 	end
@@ -442,13 +567,13 @@ function Menus.Start()
 				row.title.Text = pass.title
 				row.detail.Text = pass.description
 				row.button.Text = if owned then "✔ TUYO" else "R$ " .. pass.price
-				row.button.BackgroundColor3 = if owned then COLOR_OFF else COLOR_ROBUX
+				ButtonStyle.setColor(row.button, if owned then COLOR_OFF else COLOR_ROBUX)
 			else
 				local product = (Shop.DevProducts :: any)[entry.name]
 				row.title.Text = product.title
 				row.detail.Text = product.description
 				row.button.Text = "R$ " .. product.price
-				row.button.BackgroundColor3 = COLOR_ROBUX
+				ButtonStyle.setColor(row.button, COLOR_ROBUX)
 				if entry.name == "PackInicio" then
 					row.frame.Visible = starterAvailable()
 				end
@@ -480,6 +605,7 @@ function Menus.Start()
 			local seconds = os.clock() - startedAt
 			upgradesButton.Visible = critters >= Gameplay.Menus.upgradesAfterCritters
 			shopButton.Visible = seconds >= Gameplay.Menus.shopAfterSeconds
+			codesButton.Visible = seconds >= Gameplay.Menus.codesAfterSeconds
 			if not starterAnnounced and starterAvailable() then
 				starterAnnounced = true
 				refreshShop()

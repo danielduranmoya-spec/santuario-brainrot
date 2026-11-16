@@ -16,6 +16,7 @@ local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local Upgrades = {}
 
@@ -59,6 +60,7 @@ local function onBuyUpgrade(player: Player, name: unknown)
 
 	profile.upgrades[name] = level + 1
 	Data.Replicate(player)
+	Analytics.Step(player, "primera_mejora")
 	if name == "Botas" then
 		applyWalkSpeed(player)
 	elseif name == "Santuario" then
