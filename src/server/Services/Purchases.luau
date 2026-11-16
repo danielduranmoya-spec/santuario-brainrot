@@ -16,11 +16,13 @@ local Config = Shared:WaitForChild("Config")
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Shop = require(Config:WaitForChild("Shop"))
+local Mutations = require(Config:WaitForChild("Mutations"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
+local MutationEvents = require(script.Parent:WaitForChild("MutationEvents"))
 
 local NOT_CONFIGURED = "Este producto aún no está a la venta (falta su ID en src/shared/Config/Shop.luau)."
 
@@ -116,6 +118,13 @@ local grants: { [string]: (Player, Data.Profile) -> string } = {
 		return "🍀 ¡Suerte x2 durante " .. duration // 60 .. " minutos!"
 	end,
 }
+
+-- "Invocar Evento para el Servidor": un producto por cada evento de mutación.
+for _, eventDef in Mutations.Events.List do
+	grants[eventDef.product] = function(player, _profile)
+		return MutationEvents.Invoke(player, eventDef)
+	end
+end
 
 local function processReceipt(info: { [string]: any }): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(info.PlayerId)

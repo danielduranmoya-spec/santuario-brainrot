@@ -30,6 +30,7 @@ export type PartSpec = {
 	reflectance: number?,
 	pivot: Vector3?, -- punto de giro de una pieza animada
 	fine: boolean?, -- adorno pequeño (se omite con Art.critterDetail = 1)
+	keep: boolean?, -- no cambia con las mutaciones de color (ojos): así el bicho se sigue reconociendo
 }
 
 type Parts = { PartSpec }
@@ -128,9 +129,9 @@ end
 
 -- Un ojo: blanco, pupila, brillo y un párpado del color de la piel (invisible hasta que parpadea).
 local function eye(list: Parts, center: Vector3, size: number, lidColor: Color3, side: number)
-	add(list, ball(size, center, WHITE))
-	add(list, ball(size * 0.55, center + v(0, -size * 0.05, -size * 0.3), BLACK))
-	add(list, fine(ball(size * 0.18, center + v(side * size * 0.12, size * 0.12, -size * 0.48), WHITE)))
+	add(list, ball(size, center, WHITE)).keep = true
+	add(list, ball(size * 0.55, center + v(0, -size * 0.05, -size * 0.3), BLACK)).keep = true
+	add(list, fine(ball(size * 0.18, center + v(side * size * 0.12, size * 0.12, -size * 0.48), WHITE))).keep = true
 	add(list, named(ball(size * 1.08, center, lidColor), "Parpado", 1))
 end
 
@@ -143,7 +144,7 @@ end
 -- Ojos rasgados de luz (para los bichos oscuros); el párpado los apaga al parpadear.
 local function glowEyes(list: Parts, spread: number, y: number, z: number, size: number, color: Color3)
 	for _, side in { -1, 1 } do
-		add(list, p("Ellipsoid", v(size * 1.5, size * 0.8, size * 0.6), v(side * spread, y, z), color, v(0, 0, side * 18), NEON))
+		add(list, p("Ellipsoid", v(size * 1.5, size * 0.8, size * 0.6), v(side * spread, y, z), color, v(0, 0, side * 18), NEON)).keep = true
 		add(list, named(p("Ellipsoid", v(size * 1.6, size * 0.9, size * 0.7), v(side * spread, y, z), BLACK, v(0, 0, side * 18)), "Parpado", 1))
 	end
 end

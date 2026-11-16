@@ -107,7 +107,6 @@ Gameplay.Menus = {
 	codesAfterSeconds = 60, -- el botón CÓDIGOS, también tras el primer minuto
 	actionCooldownSeconds = 0.3,
 	codeCooldownSeconds = 2, -- entre intentos de canjear un código
-	goHomeCooldownSeconds = 5,
 }
 
 -- Brillo de cada rareza: alcance de la luz (0 = sin luz) y chispas por segundo (0 = sin chispas).
@@ -149,8 +148,8 @@ Gameplay.CritterSizes = {
 }
 
 -- Movimiento de cada rareza: multiplica la velocidad y la distancia de paseo (Spawning).
--- Cuanto más raro, más rápido y más lejos corretea. Al empezar la barra el bicho se para, y de
--- noche todos están quietos, así que la captura sigue siendo justa.
+-- Cuanto más raro, más rápido y más lejos corretea. Al empezar la barra el bicho se para,
+-- así que la captura sigue siendo justa.
 Gameplay.RarityMotion = {
 	Comun = { speed = 1, distance = 1 },
 	PocoComun = { speed = 1.3, distance = 1.2 },

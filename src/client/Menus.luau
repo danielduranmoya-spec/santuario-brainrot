@@ -13,9 +13,12 @@ local Config = Shared:WaitForChild("Config")
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Progression = require(Config:WaitForChild("Progression"))
 local Shop = require(Config:WaitForChild("Shop"))
+local CrittersConfig = require(Config:WaitForChild("Critters"))
+local Mutations = require(Config:WaitForChild("Mutations"))
 local UiStyle = require(Config:WaitForChild("UiStyle"))
 local Format = require(Shared:WaitForChild("Format"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
+local MutationMath = require(Shared:WaitForChild("MutationMath"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
 
@@ -23,6 +26,8 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local BuyUpgrade = remotes:WaitForChild("BuyUpgrade") :: RemoteEvent
 local PromptPurchase = remotes:WaitForChild("PromptPurchase") :: RemoteEvent
 local RedeemCode = remotes:WaitForChild("RedeemCode") :: RemoteEvent
+local Fuse = remotes:WaitForChild("Fuse") :: RemoteEvent
+local OpenMachine = remotes:WaitForChild("OpenMachine") :: RemoteEvent
 
 local COLOR_DARK = Color3.fromRGB(25, 25, 35)
 local COLOR_PANEL = Color3.fromRGB(40, 40, 55)
@@ -417,6 +422,12 @@ function Menus.Start()
 	local shopPanel, shopList = newPanel(gui, "Tienda")
 	local codesPanel, codesList = newPanel(gui, "Códigos")
 	local panels = { upgradesPanel, shopPanel, codesPanel }
+	local machinePanels: { [string]: { panel: Frame, list: ScrollingFrame } } = {}
+	for _, machine in Mutations.Machines do
+		local panel, list = newPanel(gui, machine.title)
+		machinePanels[machine.id] = { panel = panel, list = list }
+		table.insert(panels, panel)
+	end
 
 	-- Abre un panel y cierra los demás (o lo cierra si ya estaba abierto).
 	local function toggle(panel: Frame)
@@ -584,6 +595,93 @@ function Menus.Start()
 		local luckLeft = luckUntil - os.time()
 		infoLabel.Text = "Cebos: " .. baits .. (if luckLeft > 0 then "   🍀 Suerte: " .. math.ceil(luckLeft / 60) .. " min" else "")
 	end
+
+	-- ===== Máquinas de fusión =====
+	-- Se abren al usar la máquina en la plaza. Una fila por cada bicho del que tienes ejemplares del
+	-- tamaño que pide la máquina. El servidor vuelve a comprobarlo todo al fusionar.
+	local defsById: { [string]: CrittersConfig.Critter } = {}
+	for _, def in CrittersConfig.List do
+		defsById[def.id] = def
+	end
+	local openMachine: string? = nil
+
+	local function refreshMachine()
+		local machine = if openMachine then MutationMath.machine(openMachine) else nil
+		local entry = if openMachine then machinePanels[openMachine] else nil
+		if not machine or not entry then
+			return
+		end
+		for _, child in entry.list:GetChildren() do
+			if child:IsA("GuiObject") then
+				child:Destroy()
+			end
+		end
+		local help = newText(entry.list, UDim2.new(1, -12, 0, ROW_HEIGHT * 0.7), UDim2.new(), machine.count .. " bichos iguales " .. MutationMath.size(machine.from).id .. " = 1 " .. MutationMath.size(machine.to).label .. " (x" .. MutationMath.size(machine.to).multiplier .. "). El color sale de uno de ellos al azar.")
+		help.LayoutOrder = 0
+		help.TextColor3 = COLOR_GOLD
+
+		-- Cuántos tiene de cada bicho y de qué colores.
+		local groups: { [string]: { [string]: number } } = {}
+		local list = tostring(player:GetAttribute("CritterList") or "")
+		for _, item in string.split(list, ",") do
+			if item ~= "" then
+				local id, _, color, size = MutationMath.decode(item)
+				if size == machine.from and defsById[id] then
+					local colors = groups[id] or {}
+					colors[color] = (colors[color] or 0) + 1
+					groups[id] = colors
+				end
+			end
+		end
+		local order = 1
+		for _, def in CrittersConfig.List do
+			local colors = groups[def.id]
+			if colors then
+				local total = 0
+				local best = "Normal"
+				local parts = {}
+				for _, colorDef in Mutations.Colors do
+					local n = colors[colorDef.id]
+					if n then
+						total += n
+						table.insert(parts, n .. " " .. (if colorDef.label ~= "" then colorDef.label else "Normal"))
+						if colorDef.multiplier > MutationMath.color(best).multiplier then
+							best = colorDef.id
+						end
+					end
+				end
+				local cost = MutationMath.fusionCost(machine, def.coinsPerSecond)
+				local ready = total >= machine.count and getCoins() >= cost
+				local row = newRow(entry.list, order)
+				order += 1
+				row.title.Text = def.name .. "  " .. math.min(total, machine.count) .. "/" .. machine.count
+				row.detail.Text = table.concat(parts, ", ") .. " · " .. Format.number(cost) .. " 💰"
+				row.button.Text = if total < machine.count then "FALTAN " .. (machine.count - total) else "FUSIONAR"
+				ButtonStyle.setColor(row.button, if ready then COLOR_GOOD else COLOR_OFF)
+				row.button.Activated:Connect(function()
+					-- Entran primero los del color más valioso (así no se pierde por azar si tienes de sobra).
+					Fuse:FireServer(machine.id, def.id, best)
+				end)
+			end
+		end
+		if order == 1 then
+			local empty = newText(entry.list, UDim2.new(1, -12, 0, ROW_HEIGHT), UDim2.new(), "Aún no tienes bichos de tamaño " .. MutationMath.size(machine.from).id .. " en tu santuario.")
+			empty.LayoutOrder = 1
+		end
+	end
+
+	OpenMachine.OnClientEvent:Connect(function(machineId: string)
+		local entry = machinePanels[machineId]
+		if not entry then
+			return
+		end
+		openMachine = machineId
+		refreshMachine()
+		if not entry.panel.Visible then
+			toggle(entry.panel)
+		end
+	end)
+	player:GetAttributeChangedSignal("CritterList"):Connect(refreshMachine)
 
 	-- ===== Actualizaciones =====
 	player.AttributeChanged:Connect(function()

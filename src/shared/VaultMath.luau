@@ -147,17 +147,4 @@ function VaultMath.pickCritter(n: number, luck: number, roll: number): CrittersC
 	return if last then last.def else nil
 end
 
--- Texto de un bicho guardado: "id" o "id*multiplicador".
-function VaultMath.encodeCritter(id: string, multiplier: number): string
-	return if multiplier > 1 then id .. "*" .. multiplier else id
-end
-
-function VaultMath.decodeCritter(entry: string): (string, number)
-	local id, multiplier = string.match(entry, "^([%w_]+)%*(%d+)$")
-	if id and multiplier then
-		return id, tonumber(multiplier) or 1
-	end
-	return entry, 1
-end
-
 return VaultMath

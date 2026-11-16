@@ -19,6 +19,7 @@ local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Events = require(Config:WaitForChild("Events"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Format = require(Shared:WaitForChild("Format"))
+local MutationMath = require(Shared:WaitForChild("MutationMath"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
@@ -140,16 +141,16 @@ local function resolve(bait: ActiveBait)
 	if hasFence(victimProfile) then
 		return
 	end
-	local def, multiplier = Plots.TakeRandomCritter(victim, canBeStolen)
+	local def, multiplier, color, size = Plots.TakeRandomCritter(victim, canBeStolen)
 	if not def then
 		notify(thief, "El cebo no ha atraído a ningún bicho.")
 		return
 	end
 	victimProfile.lastStolenAt = os.time()
-	Plots.GrantCritter(thief, def, multiplier)
+	Plots.GrantCritter(thief, def, multiplier, color, size)
 	Data.Replicate(victim)
 	Data.Replicate(thief)
-	local name = def.name .. (if multiplier > 1 then " x" .. multiplier else "")
+	local name = MutationMath.displayName(def.name, color, size) .. (if multiplier > 1 then " x" .. multiplier else "")
 	notify(thief, "🍰 ¡" .. name .. " ha seguido tu cebo hasta tu santuario!")
 	notify(victim, "😢 Tu " .. name .. " se ha ido detrás del cebo de " .. thief.DisplayName .. ". Compra una VALLA para que no vuelva a pasar.")
 	Remotes.Effect:FireClient(thief, "recompensa")

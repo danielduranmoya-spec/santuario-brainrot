@@ -18,7 +18,6 @@ local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Events = require(Config:WaitForChild("Events"))
 
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
-local DayNight = require(script.Parent:WaitForChild("DayNight"))
 local CritterSpawner = require(script.Parent:WaitForChild("CritterSpawner"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
@@ -64,14 +63,9 @@ local function runLegendary()
 			-- Uno cada vez, y no gastamos el aviso en un servidor vacío.
 			nextAt = math.max(nextAt, now + L.warningSeconds + 1)
 		elseif not warned and now >= nextAt - L.warningSeconds then
-			if DayNight.IsNight() then
-				-- De noche los bichos duermen: se retrasa hasta que amanezca.
-				nextAt = now + L.warningSeconds + 1
-			else
-				warned = true
-				ReplicatedStorage:SetAttribute("LegendaryAt", Workspace:GetServerTimeNow() + (nextAt - now))
-				announce("⭐ ¡Un bicho LEGENDARIO aparecerá en " .. math.ceil(nextAt - now) .. " s en la Playa Rara! ¡Corre!", GOLD)
-			end
+			warned = true
+			ReplicatedStorage:SetAttribute("LegendaryAt", Workspace:GetServerTimeNow() + (nextAt - now))
+			announce("⭐ ¡Un bicho LEGENDARIO aparecerá en " .. math.ceil(nextAt - now) .. " s en la Playa Rara! ¡Corre!", GOLD)
 		elseif warned and now >= nextAt then
 			warned = false
 			ReplicatedStorage:SetAttribute("LegendaryAt", nil)

@@ -1,10 +1,10 @@
 --!strict
 -- Interfaz de los eventos y del robo amable (solo enseña cosas y pide acciones al servidor):
 --   * Avisos para todos (Remotes.Announce): salen en pantalla y en el chat.
---   * Cartel arriba a la derecha con cuentas atrás: legendario, Lluvia de Bichos, cebo, valla.
+--   * Cartel arriba a la derecha con cuentas atrás: legendario, Lluvia de Bichos, evento de
+--     mutación (Fiebre del Oro, Grieta del Vacío...), cebo, valla.
 --   * Marca "⭐ LEGENDARIO" sobre el bicho legendario de servidor.
---   * Botón CASA de noche (si Config/Events.DayNight.sendHome = "boton") y botón VALLA cuando te
---     ponen un cebo.
+--   * Botón VALLA cuando te ponen un cebo.
 --   * Esconde los avisos "Poner cebo" en tu propio santuario o si no tienes cebos, y el "Espantar"
 --     de los cebos que no son tuyos.
 -- Los tiempos (BaitedUntil, FenceUntil, LegendaryAt, RainEndsAt) son segundos UTC, como
@@ -21,18 +21,16 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local Events = require(Config:WaitForChild("Events"))
 local Format = require(Shared:WaitForChild("Format"))
-local VaultMath = require(Shared:WaitForChild("VaultMath"))
+local MutationMath = require(Shared:WaitForChild("MutationMath"))
 local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Announce = remotes:WaitForChild("Announce") :: RemoteEvent
-local GoHome = remotes:WaitForChild("GoHome") :: RemoteEvent
 local BuyFence = remotes:WaitForChild("BuyFence") :: RemoteEvent
 
 local COLOR_DARK = Color3.fromRGB(25, 25, 35)
 local COLOR_GOLD = Color3.fromRGB(255, 200, 40)
-local COLOR_HOME = Color3.fromRGB(90, 120, 230)
 local COLOR_FENCE = Color3.fromRGB(60, 180, 230)
 
 local LiveHud = {}
@@ -173,12 +171,8 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 	bannerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	bannerStroke.Parent = banner
 
-	local homeButton = newBigButton(gui, "Casa", "🏠 CASA", COLOR_HOME, Vector2.new(0.5, 1), UDim2.fromScale(0.5, 0.86))
 	local fenceButton = newBigButton(gui, "Valla", "🛡 VALLA " .. Format.number(Events.Bait.fenceCost) .. " 💰", COLOR_FENCE, Vector2.new(1, 0), UDim2.new(1, -12, 0, 110))
 
-	homeButton.Activated:Connect(function()
-		GoHome:FireServer()
-	end)
 	fenceButton.Activated:Connect(function()
 		BuyFence:FireServer()
 	end)
@@ -192,7 +186,7 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 	-- Al empezar un cebo en tu santuario: sonido de alerta.
 	player:GetAttributeChangedSignal("BaitedUntil"):Connect(function()
 		if player:GetAttribute("BaitedUntil") ~= nil then
-			Effects.Play("alerta_noche")
+			Effects.Play("alerta")
 		end
 	end)
 
@@ -219,6 +213,9 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 		local fenceUntil = (player:GetAttribute("FenceUntil") :: number?) or 0
 		local legendaryAt = ReplicatedStorage:GetAttribute("LegendaryAt") :: number?
 		local rainEndsAt = ReplicatedStorage:GetAttribute("RainEndsAt") :: number?
+		local mutationId = ReplicatedStorage:GetAttribute("MutationEvent") :: string?
+		local mutationEvent = if mutationId then MutationMath.event(mutationId) else nil
+		local mutationEndsAt = ReplicatedStorage:GetAttribute("MutationEventEndsAt") :: number?
 		local fenced = fenceUntil > serverNow
 		local baited = baitedUntil ~= nil and baitedUntil > serverNow and not fenced
 		if baited and baitedUntil then
@@ -229,6 +226,9 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 		elseif rainEndsAt and rainEndsAt > serverNow then
 			text = "🌧 Lluvia de Bichos x" .. Events.LluviaDeBichos.spawnMultiplier .. " · quedan " .. clock(rainEndsAt - serverNow)
 			color = Color3.fromRGB(140, 200, 255)
+		elseif mutationEvent and mutationEndsAt and mutationEndsAt > serverNow then
+			text = mutationEvent.icon .. " " .. mutationEvent.name .. " · quedan " .. clock(mutationEndsAt - serverNow)
+			color = mutationEvent.color
 		elseif fenced then
 			text = "🛡 Valla puesta · " .. clock(fenceUntil - serverNow)
 			color = COLOR_FENCE
@@ -241,17 +241,6 @@ function LiveHud.Start(gui: ScreenGui, toast: Toast)
 		-- VALLA: solo mientras te están poniendo un cebo.
 		fenceButton.Visible = baited
 		fenceButton.Position = UDim2.new(1, -12, 0, if banner.Visible then 110 else 58)
-
-		-- CASA: de noche, si estás en una bóveda (y el juego no te lleva solo).
-		local night = ReplicatedStorage:GetAttribute("IsNight") == true
-		local mode = ReplicatedStorage:GetAttribute("NightSendHome")
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local inVault = false
-		if root and root:IsA("BasePart") then
-			inVault = VaultMath.vaultAt(root.Position) ~= nil
-		end
-		homeButton.Visible = night and mode == "boton" and inVault
 	end)
 end
 

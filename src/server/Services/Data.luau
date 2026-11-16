@@ -19,6 +19,7 @@ local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Progression = require(Config:WaitForChild("Progression"))
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local VaultMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("VaultMath"))
+local MutationMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MutationMath"))
 
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 
@@ -124,11 +125,11 @@ local function reconcile(saved: any): Profile
 	if type(saved.critters) == "table" then
 		for _, entry in saved.critters do
 			if type(entry) == "string" then
-				local id, multiplier = VaultMath.decodeCritter(entry)
+				local id, multiplier, color, size = MutationMath.decode(entry)
 				-- Bichos del catálogo anterior: se cambian por su sustituto de la misma rareza.
 				id = CrittersConfig.Replaced[id] or id
 				if critterIds[id] then
-					table.insert(profile.critters, VaultMath.encodeCritter(id, math.max(1, multiplier)))
+					table.insert(profile.critters, MutationMath.encode(id, math.max(1, multiplier), color, size))
 				end
 			end
 		end

@@ -214,20 +214,6 @@ nextPadding.PaddingTop = UDim.new(0.15, 0)
 nextPadding.PaddingBottom = UDim.new(0.15, 0)
 nextPadding.Parent = nextText
 
--- Día y noche: cuenta atrás abajo a la derecha.
-local dayLabel = newLabel("DiaNoche", UDim2.fromScale(0.18, 0.065), UDim2.new(1, -12, 1, CORNER_LIFT), gui)
-dayLabel.AnchorPoint = Vector2.new(1, 1)
-dayLabel.Text = "☀ 5:00"
-local dayLimit = Instance.new("UISizeConstraint")
-dayLimit.MinSize = Vector2.new(130, 40)
-dayLimit.MaxSize = Vector2.new(230, 60)
-dayLimit.Parent = dayLabel
-local dayStroke = Instance.new("UIStroke")
-dayStroke.Thickness = 2
-dayStroke.Transparency = 0.3
-dayStroke.Color = Color3.fromRGB(255, 230, 120)
-dayStroke.Parent = dayLabel
-
 local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.12), gui)
 hintLabel.Visible = false
 
@@ -276,7 +262,6 @@ local minigame: MinigameData? = nil
 local waitingResult = false
 local hasCaught = false
 local hasCollected = false
-local nightWarned = false
 local toastId = 0
 
 local function showToast(text: string, color: Color3?)
@@ -540,31 +525,8 @@ RunService.RenderStepped:Connect(function()
 		updateGuide(nil)
 	end
 
-	-- Día y noche.
-	local night = ReplicatedStorage:GetAttribute("IsNight") == true
-	local endsAt = (ReplicatedStorage:GetAttribute("PhaseEndsAt") :: number?) or 0
-	local left = math.max(0, math.ceil(endsAt - Workspace:GetServerTimeNow()))
-	local clock = string.format("%d:%02d", left // 60, left % 60)
-	local warning = (ReplicatedStorage:GetAttribute("NightWarningSeconds") :: number?) or 0
-	dayLabel.Text = (if night then "🌙 Noche " else "☀ Día ") .. clock
-	dayLabel.TextColor3 = if night then Color3.fromRGB(170, 190, 255) elseif left <= warning then COLOR_BAD else Color3.fromRGB(255, 230, 120)
-
-	-- Aviso de que anochece: sonido, mensaje y el reloj parpadea en rojo.
-	local warningNow = not night and left > 0 and left <= warning
-	if warningNow and not nightWarned then
-		nightWarned = true
-		Effects.Play("alerta_noche")
-		local forced = ReplicatedStorage:GetAttribute("NightSendHome") == "forzado"
-		showToast("⚠ ¡Anochece en " .. left .. " segundos! Los bichos se dormirán" .. (if forced then " y volverás a tu santuario." else "."), COLOR_BAD)
-	elseif not warningNow then
-		nightWarned = false
-	end
-	dayLabel.BackgroundColor3 = if warningNow and (os.clock() % 0.6) < 0.3 then COLOR_BAD else COLOR_DARK
-
 	local hint: string? = nil
-	if night then
-		hint = "🌙 Los bichos duermen: cobra en tu santuario o espera a que amanezca (" .. clock .. ")"
-	elseif carrying then
+	if carrying then
 		hint = "🏠 Lleva el bicho a tu santuario (sigue el rayo amarillo)"
 	elseif not hasCaught then
 		hint = "👉 Acércate a un bicho y pulsa Atrapar"
@@ -572,8 +534,6 @@ RunService.RenderStepped:Connect(function()
 		hint = "💰 Pisa la plataforma dorada de tu santuario para cobrar"
 	elseif canAfford then
 		hint = "🔓 ¡Ya puedes abrir la bóveda " .. nextVault .. "! Sigue el rayo amarillo"
-	elseif left <= warning then
-		hint = "⚠ ¡Anochece en " .. clock .. "! Date prisa"
 	end
 	hintLabel.Visible = hint ~= nil and current == nil
 	hintLabel.Text = hint or ""

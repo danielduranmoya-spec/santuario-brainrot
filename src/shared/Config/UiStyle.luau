@@ -18,7 +18,6 @@ UiStyle.Buttons = {
 	Codigos = nil, -- botón lateral CÓDIGOS
 	Ahora = nil, -- ¡AHORA! (minijuego de captura)
 	Soltar = nil, -- SOLTAR (cuando llevas un bicho)
-	Casa = nil, -- CASA (de noche, volver al santuario)
 	Valla = nil, -- VALLA (cuando te ponen un cebo)
 	Comprar = nil, -- botones de precio dentro de MEJORAS y TIENDA
 	Canjear = nil, -- CANJEAR (dentro de CÓDIGOS)

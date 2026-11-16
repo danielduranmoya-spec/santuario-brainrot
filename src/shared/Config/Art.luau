@@ -148,11 +148,15 @@ Art.vaultDecor = {
 	obelisks = 6, -- Santuario del Eclipse
 }
 
--- Noche (el cliente tiñe la pantalla; el servidor oscurece el cielo).
-Art.night = {
-	tint = Color3.fromRGB(150, 170, 255),
-	brightness = 0.6,
-	ambient = Color3.fromRGB(60, 70, 110),
+-- Eventos de mutación: cuánto se tiñe la pantalla con el color del evento (0-1) y las partículas
+-- que caen del cielo alrededor del jugador (solo en su pantalla).
+Art.mutationEvent = {
+	tintStrength = 0.75,
+	skyHeight = 28, -- altura sobre el jugador desde la que caen
+	skySize = 70, -- lado del cuadrado de cielo del que caen
+	rate = 45, -- partículas por segundo
+	fallSpeed = 14,
+	lifetime = 2.2,
 }
 
 -- Material del suelo de cada zona (Terrain).

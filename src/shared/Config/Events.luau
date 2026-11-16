@@ -39,21 +39,6 @@ Events.Bait = {
 	neverSteal = { Legendario = true, Mitico = true, Secreto = true }, -- rarezas que nunca se escapan
 }
 
--- Ciclo de día y noche: de noche los bichos duermen y no se puede atrapar nada.
-Events.DayNight = {
-	daySeconds = 5 * 60,
-	nightSeconds = 30,
-	transitionSeconds = 4, -- lo que tarda la luz en cambiar
-	dayClockTime = 14.5, -- hora que marca el cielo de día (0-24)
-	nightClockTime = 22.5, -- de noche (se usa 22,5 y no 0 para que la luz cambie sin dar la vuelta al reloj)
-	warningSeconds = 10, -- aviso (sonido y mensaje) antes de que anochezca
-	musicFadeSeconds = 3, -- fundido entre la música de día y la de noche
-	-- Qué pasa al anochecer si estás en una bóveda:
-	--   "boton"   = aparece un botón CASA para volver cuando quieras (recomendado: cansa menos)
-	--   "forzado" = te devuelve a tu santuario automáticamente (como antes)
-	sendHome = "boton",
-}
-
 Events.DailyRewardStreakDays = 7
 
 -- Premio de cada día de la racha (uno por día, tantos como DailyRewardStreakDays).
