@@ -110,6 +110,22 @@ Gameplay.Tutorial = {
 	doneHideSeconds = 6, -- el panel desaparece al terminar
 }
 
+-- Rankings físicos detrás de los santuarios (server/Services/Leaderboards). Usan OrderedDataStore,
+-- así que son globales (todos los servidores). En Studio sin publicar enseñan solo este servidor.
+Gameplay.Leaderboards = {
+	updateSeconds = 60, -- cada cuánto se guardan las puntuaciones y se redibujan los carteles
+	rows = 10,
+	storeVersion = 1, -- cambiarlo empieza los rankings de cero
+	z = 158, -- detrás de la última fila de santuarios, mirando hacia la plaza
+	spacingX = 26,
+	size = Vector3.new(18, 24, 1),
+	Boards = {
+		{ id = "Robux", title = "MÁS ROBUX GASTADOS", subtitle = "Apoyo al juego", stat = "robuxSpent", suffix = " R$", color = Color3.fromRGB(80, 200, 120) },
+		{ id = "Monedas", title = "MÁS MONEDAS", subtitle = "Monedas que tiene ahora", stat = "coins", suffix = " 💰", color = Color3.fromRGB(255, 200, 40) },
+		{ id = "Capturas", title = "MÁS BICHOS", subtitle = "Bichos capturados en total", stat = "totalCaught", suffix = "", color = Color3.fromRGB(90, 170, 255) },
+	} :: { { id: string, title: string, subtitle: string, stat: string, suffix: string, color: Color3 } },
+}
+
 Gameplay.Menus = {
 	upgradesAfterCritters = 1, -- el botón MEJORAS sale al tener este número de bichos en el santuario
 	shopAfterSeconds = 60, -- GDD: nada de tiendas antes del primer minuto

@@ -267,7 +267,7 @@ local function iconButton(parent: Instance, label: string, key: string, top: Col
 	local style = UiStyle.styleFor(key)
 	local button = Instance.new("TextButton")
 	button.Name = "Boton" .. key
-	button.Size = UDim2.fromScale(1, 0.3)
+	button.Size = UDim2.fromScale(1, 0.23) -- caben 4 en la columna (MEJORAS, TIENDA, CÓDIGOS, ÍNDICE)
 	button.Text = ""
 	button.AutoButtonColor = false
 	button.BackgroundColor3 = top
@@ -399,14 +399,14 @@ function Menus.Start()
 	-- Arriba a la izquierda, bajo la barra de Roblox: deja libre la esquina de abajo para la cartera.
 	side.AnchorPoint = Vector2.new(0, 0)
 	side.Position = UDim2.new(0, 12, 0, 54)
-	side.Size = UDim2.new(0.12, 0, 0.66, 0)
+	side.Size = UDim2.new(0.12, 0, 0.78, 0)
 	side.BackgroundTransparency = 1
 	side.Parent = gui
 	local sideLimit = Instance.new("UISizeConstraint")
-	sideLimit.MaxSize = Vector2.new(120, 380)
+	sideLimit.MaxSize = Vector2.new(120, 470)
 	sideLimit.Parent = side
 	local sideLayout = Instance.new("UIListLayout")
-	sideLayout.Padding = UDim.new(0.04, 0)
+	sideLayout.Padding = UDim.new(0.02, 0) -- 4 botones de 0.23 + 3 huecos = 0.98
 	sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	sideLayout.Parent = side
 
@@ -445,6 +445,19 @@ function Menus.Start()
 			Effects.Pop(panel)
 		end
 	end
+
+	-- Para otros módulos del cliente (client/Bestiary): botón en la columna y panel que se abre con él.
+	function Menus.AddSideButton(label: string, key: string, top: Color3, bottom: Color3, draw: (Frame) -> (), order: number): (TextButton, Frame)
+		local button, badge = iconButton(side, label, key, top, bottom, draw)
+		button.LayoutOrder = order
+		return button, badge
+	end
+	function Menus.AddPanel(title: string): (Frame, ScrollingFrame)
+		local panel, list = newPanel(gui, title)
+		table.insert(panels, panel)
+		return panel, list
+	end
+	Menus.Toggle = toggle
 	upgradesButton.Activated:Connect(function()
 		toggle(upgradesPanel)
 	end)
@@ -725,5 +738,14 @@ end
 
 -- Main.client lo sustituye por su función de avisos.
 function Menus.OnLocalNotice(_text: string) end
+
+-- Los rellena Menus.Start (client/Bestiary los usa después).
+function Menus.AddSideButton(_label: string, _key: string, _top: Color3, _bottom: Color3, _draw: (Frame) -> (), _order: number): (TextButton, Frame)
+	error("Menus.Start todavía no se ha llamado")
+end
+function Menus.AddPanel(_title: string): (Frame, ScrollingFrame)
+	error("Menus.Start todavía no se ha llamado")
+end
+function Menus.Toggle(_panel: Frame) end
 
 return Menus

@@ -53,4 +53,41 @@ Events.DailyRewards = {
 	{ coins = 0, critterRarity = "Raro" }, -- GDD: el día 7 da un bicho raro
 }
 
+-- Stands de eventos en la plaza (server/Services/EventStands): un puesto con su encargado, cartel
+-- "EVENTO" con cuenta atrás y aviso "Hablar" que explica el evento. Están a los lados de la avenida,
+-- entre las entradas de los santuarios, mirando hacia ella. `kind` dice qué cuenta atrás enseñan.
+Events.Stands = {
+	{
+		id = "Tormenta",
+		kind = "legendario",
+		title = "LOBO DE TORMENTA",
+		keeper = "Tormentina",
+		position = Vector2.new(-21, 29),
+		color = Color3.fromRGB(70, 110, 220),
+		accent = Color3.fromRGB(255, 205, 60),
+		talk = "⛈ Soy Tormentina. Cada 8 minutos el Lobo de Tormenta baja a la Playa Rara. ¡El primero que lo atrape se lo queda! Mira mi cartel para saber cuándo.",
+	},
+	{
+		id = "Lluvia",
+		kind = "lluvia",
+		title = "LLUVIA DE BICHOS",
+		keeper = "Don Chubasco",
+		position = Vector2.new(21, 29),
+		color = Color3.fromRGB(60, 170, 200),
+		accent = Color3.fromRGB(190, 240, 255),
+		talk = "🌧 Soy Don Chubasco. Los sábados a las 18:00 llueven bichos: salen el triple durante 30 minutos y a veces el Ajolote Chubasquero, que solo aparece ese día.",
+	},
+	{
+		id = "Mutaciones",
+		kind = "mutacion",
+		title = "MUTACIONES",
+		keeper = "Alquimista Mutia",
+		position = Vector2.new(-21, 87),
+		color = Color3.fromRGB(150, 70, 220),
+		accent = Color3.fromRGB(120, 255, 200),
+		talk = "⚗ Soy Mutia. Cada 20 minutos llega un evento de mutación y salen más bichos de Oro, Diamante, Neón... ¡Y en la TIENDA puedes invocar uno para todo el servidor!",
+	},
+} :: { { id: string, kind: string, title: string, keeper: string, position: Vector2, color: Color3, accent: Color3, talk: string } }
+Events.standPromptDistance = 10
+
 return Events

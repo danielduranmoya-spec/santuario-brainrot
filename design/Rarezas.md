@@ -78,7 +78,7 @@ del Eclipse). Se cambia en el campo `vault` de cada bicho.
 
 ## Modelos
 
-Los modelos están en `src/server/Services/CritterArt.luau`, hechos por código con piezas de Roblox. Para verlos
+Los modelos están en `src/shared/CritterArt.luau`, hechos por código con piezas de Roblox. Para verlos
 sin abrir Studio: `python3 design/herramientas/vista_previa_bichos.py` y abre
 `design/herramientas/vista_previa_bichos.html` en el navegador. `Config/Art.critterDetail = 1` quita los adornos
 pequeños si el juego va lento en móviles modestos.
