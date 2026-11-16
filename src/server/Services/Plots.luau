@@ -50,7 +50,8 @@ type Plot = {
 	collectPad: BasePart,
 	slotPads: { BasePart },
 	owner: Player?,
-	parts: { BasePart }, -- bichos dibujados en los pedestales
+	parts: { [number]: BasePart }, -- bichos dibujados en cada pedestal
+	partEntries: { [number]: string }, -- qué bicho (texto guardado) hay dibujado en cada pedestal
 	pending: number,
 	slotCount: number,
 	fence: Model?,
@@ -253,6 +254,7 @@ local function buildPlot(index: number): Plot
 		slotPads = slotPads,
 		owner = nil,
 		parts = {},
+		partEntries = {},
 		pending = 0,
 		slotCount = Progression.StartingSlots,
 		fence = nil,
@@ -297,13 +299,10 @@ local function fullName(def: CritterDef, multiplier: number, color: string?, siz
 	return MutationMath.displayName(def.name, color, size) .. (if multiplier > 1 then " x" .. multiplier else "")
 end
 
--- Vuelve a dibujar los pedestales y los bichos del santuario a partir del perfil.
+-- Vuelve a dibujar los pedestales y los bichos del santuario a partir del perfil. Solo se rehacen
+-- los pedestales que han cambiado: cada bicho son ~50 piezas y antes se rehacía todo el santuario
+-- (y se mandaba entero por la red) en cada captura.
 local function render(plot: Plot)
-	for _, part in plot.parts do
-		part:Destroy()
-	end
-	plot.parts = {}
-
 	local owner = plot.owner
 	local profile = owner and Data.Get(owner)
 	plot.slotCount = if owner then slotCountFor(owner) else Progression.StartingSlots
@@ -314,20 +313,27 @@ local function render(plot: Plot)
 		pad.Material = if unlocked then Enum.Material.SmoothPlastic else Enum.Material.Slate
 	end
 
-	local waiting = 0
-	if profile then
-		for i, entry in profile.critters do
-			local def, multiplier, income, color, size = entryIncome(entry)
-			if i > plot.slotCount then
-				waiting += 1
-			elseif def then
-				local pad = plot.slotPads[i]
-				local part = CritterVisual.create(def, color, size, true)
-				part.CFrame = plot.origin * slotOffset(i) * CFrame.new(0, 1.45 + part.Size.Y / 2, 0)
-				CritterVisual.setDetail(part, (if multiplier > 1 then "x" .. multiplier .. " · " else "") .. "+" .. Format.number(income) .. "/s")
-				part.Parent = plot.model
-				table.insert(plot.parts, part)
-				local _ = pad
+	local critters: { string } = if profile then profile.critters else {}
+	local waiting = math.max(0, #critters - plot.slotCount)
+	for i = 1, #plot.slotPads do
+		local entry = if i <= plot.slotCount then critters[i] else nil
+		if plot.partEntries[i] ~= entry then
+			local old = plot.parts[i]
+			if old then
+				old:Destroy()
+			end
+			plot.parts[i] = nil
+			plot.partEntries[i] = nil
+			if entry then
+				local def, multiplier, income, color, size = entryIncome(entry)
+				if def then
+					local part = CritterVisual.create(def, color, size, true)
+					part.CFrame = plot.origin * slotOffset(i) * CFrame.new(0, 1.45 + part.Size.Y / 2, 0)
+					CritterVisual.setDetail(part, (if multiplier > 1 then "x" .. multiplier .. " · " else "") .. "+" .. Format.number(income) .. "/s")
+					part.Parent = plot.model
+					plot.parts[i] = part
+					plot.partEntries[i] = entry
+				end
 			end
 		end
 	end

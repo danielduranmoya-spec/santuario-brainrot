@@ -42,8 +42,12 @@ Están en la plaza, una a cada lado de la avenida, justo antes de la primera bó
 - **Agrandadora:** 5 bichos iguales de tamaño Normal + monedas → 1 Grande.
 - **Titánica:** 4 Grandes iguales + monedas → 1 Enorme.
 
-Coste en monedas: lo que produce ese bicho (base) en 300 s en la Agrandadora y en 900 s en la
-Titánica, con un mínimo de 100 y 1.000. *(Decisión mía; ajustable en `Mutations.Machines`.)*
+Coste en monedas: lo que produce uno de los bichos que entran en 300 s en la Agrandadora y en 900 s
+en la Titánica, con un mínimo de 100 y 1.000. Cuenta el multiplicador de bóveda y el tamaño de
+entrada (un Grande produce x3), pero no el color. *(Ajustable en `Mutations.Machines`.)*
+Antes solo contaba la producción base: en la bóveda 9 (x243) fusionar costaba 0,01 minutos de lo
+que produce el resultado, es decir, era gratis. Ahora cuesta 1,7 minutos (Agrandadora) y 6,4
+(Titánica) en cualquier bóveda. Ver `design/Economia.md`.
 
 **Herencia de color:** el resultado toma el color de uno de los bichos que entran, elegido al azar.
 Todos del mismo color → se conserva al 100 %. 2 Oro + 3 Normales → 40 % Oro. Si tienes más bichos

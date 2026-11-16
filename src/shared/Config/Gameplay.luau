@@ -101,12 +101,52 @@ Gameplay.Data = {
 	closeTimeoutSeconds = 25, -- Roblox da unos 30 s para guardar al cerrar el servidor
 }
 
+-- Objetivos de los primeros minutos (client/Main, panel "Objetivos" a la derecha). Se dan por
+-- hechos con lo que el servidor ya guarda (bichos, bóvedas, mejoras), así que a quien vuelve no se
+-- le repiten. Simulado: un jugador nuevo los termina hacia el minuto 4-5 (design/Economia.md).
+Gameplay.Tutorial = {
+	critterGoal = 3, -- "Ten 3 bichos en tu santuario"
+	vaultGoal = 2, -- "Abre la bóveda 2"
+	doneHideSeconds = 6, -- el panel desaparece al terminar
+}
+
 Gameplay.Menus = {
 	upgradesAfterCritters = 1, -- el botón MEJORAS sale al tener este número de bichos en el santuario
 	shopAfterSeconds = 60, -- GDD: nada de tiendas antes del primer minuto
 	codesAfterSeconds = 60, -- el botón CÓDIGOS, también tras el primer minuto
 	actionCooldownSeconds = 0.3,
 	codeCooldownSeconds = 2, -- entre intentos de canjear un código
+}
+
+-- Defensa contra trampas (server/Services/Guard). Cada petición del cliente gasta una ficha de su
+-- "cubo": se rellena a `rate` fichas por segundo y caben como mucho `burst`. Sin fichas, la petición
+-- se ignora. Si alguien acumula muchas peticiones ignoradas seguidas, se le expulsa (es un script).
+Gameplay.Security = {
+	limits = {
+		AttemptCatch = { rate = 2, burst = 4 },
+		ReleaseCarried = { rate = 2, burst = 4 },
+		BuyUpgrade = { rate = 5, burst = 10 },
+		PromptPurchase = { rate = 2, burst = 4 },
+		RedeemCode = { rate = 0.5, burst = 3 },
+		BuyFence = { rate = 1, burst = 3 },
+		Fuse = { rate = 2, burst = 4 },
+		Default = { rate = 5, burst = 10 },
+	} :: { [string]: { rate: number, burst: number } },
+	floodWindowSeconds = 10, -- se cuentan las peticiones ignoradas en esta ventana...
+	floodKickAfter = 150, -- ...y con tantas se expulsa al jugador (un humano no llega ni a 20)
+	kickOnFlood = true,
+	-- Margen para el toque de la barra: el servidor mira hacia atrás lo que tarda en llegar el toque
+	-- (la mitad del ping de ida y vuelta del jugador, más un poco), nunca más de
+	-- Catching.latencyToleranceSeconds. Así un tramposo no puede elegir el mejor instante.
+	pingShare = 0.6,
+	pingExtraSeconds = 0.03,
+	distanceTolerance = 4, -- studs de margen al comprobar que estás junto a una máquina o un santuario
+	-- Teletransporte: si el personaje se mueve en horizontal más rápido que su WalkSpeed x speedSlack
+	-- + speedExtraStuds por segundo, durante teleportBlockSeconds no puede empezar capturas.
+	speedCheckSeconds = 1, -- ventana larga: un tirón de red no parece un teletransporte
+	speedSlack = 1.5,
+	speedExtraStuds = 12,
+	teleportBlockSeconds = 3,
 }
 
 -- Brillo de cada rareza: alcance de la luz (0 = sin luz) y chispas por segundo (0 = sin chispas).

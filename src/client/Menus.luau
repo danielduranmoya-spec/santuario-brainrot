@@ -104,6 +104,10 @@ local function newPanel(gui: ScreenGui, title: string): (Frame, ScrollingFrame)
 	titleLabel.Font = Enum.Font.GothamBlack
 
 	local close = newButton(panel, UDim2.fromScale(0.14, 0.1), UDim2.fromScale(0.84, 0.02), Color3.fromRGB(230, 80, 70), "X", "Cerrar")
+	-- En un móvil en horizontal la X medía ~30 píxeles: nunca menos de lo que pide un dedo.
+	local closeLimit = Instance.new("UISizeConstraint")
+	closeLimit.MinSize = Vector2.new(48, 44)
+	closeLimit.Parent = close
 	close.Activated:Connect(function()
 		panel.Visible = false
 	end)
@@ -622,14 +626,16 @@ function Menus.Start()
 
 		-- Cuántos tiene de cada bicho y de qué colores.
 		local groups: { [string]: { [string]: number } } = {}
+		local lowestMultiplier: { [string]: number } = {} -- el precio depende de la bóveda de origen
 		local list = tostring(player:GetAttribute("CritterList") or "")
 		for _, item in string.split(list, ",") do
 			if item ~= "" then
-				local id, _, color, size = MutationMath.decode(item)
+				local id, multiplier, color, size = MutationMath.decode(item)
 				if size == machine.from and defsById[id] then
 					local colors = groups[id] or {}
 					colors[color] = (colors[color] or 0) + 1
 					groups[id] = colors
+					lowestMultiplier[id] = math.min(lowestMultiplier[id] or math.huge, multiplier)
 				end
 			end
 		end
@@ -650,7 +656,7 @@ function Menus.Start()
 						end
 					end
 				end
-				local cost = MutationMath.fusionCost(machine, def.coinsPerSecond)
+				local cost = MutationMath.fusionCost(machine, def.coinsPerSecond, lowestMultiplier[def.id])
 				local ready = total >= machine.count and getCoins() >= cost
 				local row = newRow(entry.list, order)
 				order += 1

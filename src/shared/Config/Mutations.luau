@@ -248,4 +248,13 @@ Mutations.Events = {
 
 Mutations.announceColor = Color3.fromRGB(255, 205, 60) -- dorado: aviso global de quien invoca un evento
 
+-- Aviso a todo el servidor cuando aparece un bicho con mutación rara (color x tamaño >= minMultiplier:
+-- Arcoíris o mejor, cualquier Enorme, o Grande con Oro o mejor). Sale arriba en pantalla y el bicho
+-- lleva una baliza visible desde lejos. Con 5 sale más o menos uno cada 5 minutos (1 % de los bichos).
+Mutations.rareAlert = {
+	minMultiplier = 5,
+	showSeconds = 6, -- tiempo del aviso en pantalla
+	beaconMaxDistance = 600, -- studs desde los que se ve la baliza
+}
+
 return Mutations

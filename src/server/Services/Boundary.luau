@@ -15,6 +15,7 @@ local Art = require(Config:WaitForChild("Art"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 
 local Plots = require(script.Parent:WaitForChild("Plots"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 
 local B = Art.boundary
@@ -79,6 +80,7 @@ local function rescue(player: Player, root: BasePart)
 	local target = Plots.GetSafeCFrame(player) or CFrame.new(F.spawn + Vector3.new(0, Gameplay.GroundY + 4, 0))
 	root.AssemblyLinearVelocity = Vector3.zero
 	if player.Character then
+		Guard.NoteTeleport(player)
 		player.Character:PivotTo(target)
 	end
 	Remotes.Notify:FireClient(player, "¡Uy! Has vuelto a tu santuario.")

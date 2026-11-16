@@ -6,6 +6,7 @@
 local Services = script.Parent:WaitForChild("Services")
 
 local Data = require(Services:WaitForChild("Data"))
+local Guard = require(Services:WaitForChild("Guard"))
 local Analytics = require(Services:WaitForChild("Analytics"))
 local Economy = require(Services:WaitForChild("Economy"))
 local WorldArt = require(Services:WaitForChild("WorldArt"))
@@ -22,6 +23,7 @@ local LiveEvents = require(Services:WaitForChild("LiveEvents"))
 local Bait = require(Services:WaitForChild("Bait"))
 local Codes = require(Services:WaitForChild("Codes"))
 
+Guard.Start()
 Analytics.Start() -- el primero en apuntarse a Data.OnLoaded: paso "entra" del embudo
 WorldArt.Start()
 Economy.Start()

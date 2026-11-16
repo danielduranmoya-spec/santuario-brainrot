@@ -25,6 +25,7 @@ local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local B = Events.Bait
@@ -117,6 +118,9 @@ local function createBaitPart(victim: Player, origin: CFrame): BasePart
 		if player ~= victim or not bait or bait.part ~= part then
 			return
 		end
+		if not Guard.IsNear(player, part.Position, B.promptDistance) then
+			return
+		end
 		clearBait(victim)
 		notify(victim, "🛡 ¡Has espantado el cebo! Tus bichos están a salvo.")
 		if bait.thief.Parent then
@@ -168,6 +172,10 @@ local function placeBait(thief: Player, victim: Player?, origin: CFrame)
 		return
 	end
 	if victim == thief then
+		return
+	end
+	-- Hay que estar en la entrada de ese santuario (el aviso se puede activar desde lejos con trampas).
+	if not Guard.IsNear(thief, (origin * CFrame.new(0, 3, -S.plotSize / 2 - 4)).Position, B.promptDistance) then
 		return
 	end
 	if thiefProfile.baits < 1 then
@@ -269,7 +277,7 @@ function Bait.Start()
 	for _, plot in Plots.GetPlots() do
 		addBaitPrompt(plot)
 	end
-	Remotes.BuyFence.OnServerEvent:Connect(onBuyFence)
+	Guard.Connect(Remotes.BuyFence, "BuyFence", onBuyFence)
 
 	Data.OnLoaded(function(player, profile)
 		if hasFence(profile) then

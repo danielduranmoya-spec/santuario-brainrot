@@ -43,6 +43,7 @@ local Mutations = require(Config:WaitForChild("Mutations"))
 local Data = require(script.Parent:WaitForChild("Data"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
+local Guard = require(script.Parent:WaitForChild("Guard"))
 local Plots = require(script.Parent:WaitForChild("Plots"))
 local Vaults = require(script.Parent:WaitForChild("Vaults"))
 local MutationEvents = require(script.Parent:WaitForChild("MutationEvents"))
@@ -295,8 +296,25 @@ local function spawnWild(def: CritterDef, vault: number, groundPosition: Vector3
 		startMinigame(player, w)
 	end)
 
+	-- Mutación rara recién sorteada (no un bicho soltado ni reservado): aviso para todos y baliza.
+	-- El atributo va antes de meterlo en el Workspace para que llegue a la vez que el bicho.
+	local mutationMultiplier = MutationMath.multiplier(colorId, sizeId)
+	local isRare = color == nil and size == nil and reservedFor == nil and mutationMultiplier >= Mutations.rareAlert.minMultiplier
+	if isRare then
+		part:SetAttribute("RareMutation", true)
+	end
 	wild[uid] = w
 	part.Parent = folder
+
+	if isRare then
+		local look = MutationMath.color(colorId)
+		local tint = look.light or look.tint or Color3.fromRGB(255, 205, 60)
+		Remotes.RareSpawn:FireAllClients(
+			"🌟 ¡" .. MutationMath.displayName(def.name, colorId, sizeId) .. " (x" .. mutationMultiplier .. ") en la bóveda " .. vault .. "!",
+			tint,
+			vault
+		)
+	end
 	return w
 end
 
@@ -341,7 +359,7 @@ local function startCarrying(player: Player, w: Wild): (boolean, boolean)
 	end
 	if not grew then
 		w.prompt:Destroy()
-		for _, attribute in { "CritterUid", "LockedBy", "TutorialFor", "ReservedFor", "Vault", "EventTag" } do
+		for _, attribute in { "CritterUid", "LockedBy", "TutorialFor", "ReservedFor", "Vault", "EventTag", "RareMutation" } do
 			part:SetAttribute(attribute, nil)
 		end
 	end
@@ -431,6 +449,10 @@ startMinigame = function(player: Player, w: Wild)
 	if not root or (root.Position - w.part.Position).Magnitude > Catching.range + w.part.Size.Y / 2 + Catching.rangeTolerance then
 		return
 	end
+	if Guard.MovedTooFast(player) then
+		notify(player, "Espera un momento y vuelve a intentarlo.")
+		return -- se ha movido más rápido de lo posible (teletransporte con trampas)
+	end
 
 	setLocked(w, player)
 	if w.tween then
@@ -475,7 +497,8 @@ local function onAttemptCatch(player: Player, pressedAt: unknown)
 	-- El momento que dice el cliente solo se acepta dentro de una ventana corta antes de ahora.
 	local moment = now
 	if typeof(pressedAt) == "number" and pressedAt == pressedAt then
-		moment = math.clamp(pressedAt, now - Catching.latencyToleranceSeconds, now)
+		-- Solo se mira hacia atrás lo que tarda en llegar el toque con el ping de este jugador.
+		moment = math.clamp(pressedAt, now - Guard.CatchTolerance(player), now)
 	end
 	local elapsed = moment - mg.startTime
 	local hit = elapsed >= 0 and CatchBar.isInZone(CatchBar.markerAt(elapsed, Catching.barCycleSeconds), mg.zoneCenter, mg.zoneWidth)
@@ -695,8 +718,8 @@ function CritterSpawner.SetSpawnBoost(multiplier: number, exclusive: CritterDef?
 end
 
 function CritterSpawner.Start()
-	Remotes.AttemptCatch.OnServerEvent:Connect(onAttemptCatch)
-	Remotes.ReleaseCarried.OnServerEvent:Connect(onReleaseCarried)
+	Guard.Connect(Remotes.AttemptCatch, "AttemptCatch", onAttemptCatch)
+	Guard.Connect(Remotes.ReleaseCarried, "ReleaseCarried", onReleaseCarried)
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	for _, player in Players:GetPlayers() do
