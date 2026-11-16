@@ -2,6 +2,7 @@
 
 Primer juego de Roblox del proyecto. Atrapa bichos absurdos con una red, llévalos a tu santuario y deja que generen monedas.
 
+- Nuevo en el proyecto: [`docs/ONBOARDING.md`](docs/ONBOARDING.md)
 - Diseño: [`design/GDD.md`](design/GDD.md)
 - Balance: [`src/shared/Config/`](src/shared/Config/)
 - Instrucciones para Claude: [`CLAUDE.md`](CLAUDE.md)
