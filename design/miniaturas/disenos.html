@@ -1,0 +1,482 @@
+<title>Elige los diseños del Santuario</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Montserrat:wght@500;700;900&family=Sarpanch:wght@700;900&family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* Layout: una columna de "mesas de prueba"; cada botón tiene una fila con sus tres estilos sobre césped del juego. */
+:root {
+  --bg: #f3f6ef;
+  --surface: #ffffff;
+  --ink: #1d2a1f;
+  --muted: #5d6b5f;
+  --line: #d6dfd2;
+  --accent: #2f8f4e;
+  --pick: #ff9f1c;
+  --grass-a: #79c25a;
+  --grass-b: #5aa645;
+  --code-bg: #18221a;
+  --code-fg: #d9f2d0;
+  --font-display: "Luckiest Guy", "Arial Black", Impact, sans-serif;
+  --font-body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --font-gotham: "Montserrat", "Arial Black", sans-serif;
+  --font-neon: "Sarpanch", "Arial Narrow", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121a14; --surface: #1b251d; --ink: #e8f1e4; --muted: #a2b19f; --line: #2f3d31;
+    --accent: #6fd08f; --pick: #ffb54d; --grass-a: #3f7a33; --grass-b: #2f6127;
+    --code-bg: #0b100c; --code-fg: #cdeec2; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121a14; --surface: #1b251d; --ink: #e8f1e4; --muted: #a2b19f; --line: #2f3d31;
+  --accent: #6fd08f; --pick: #ffb54d; --grass-a: #3f7a33; --grass-b: #2f6127;
+  --code-bg: #0b100c; --code-fg: #cdeec2; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+header h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 0 0 12px; letter-spacing: 0.5px; color: var(--accent); text-wrap: balance; }
+header p { margin: 0; max-width: 64ch; color: var(--muted); }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 30px; margin: 0 0 6px; letter-spacing: 0.4px; }
+.lead { margin: 0 0 18px; color: var(--muted); max-width: 70ch; }
+.styles-key { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.styles-key div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.styles-key b { display: block; font-size: 15px; }
+.styles-key span { font-size: 14px; color: var(--muted); }
+
+/* Fila de un botón */
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.row-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.row-head h3 { margin: 0; font-size: 19px; font-weight: 800; }
+.row-head small { color: var(--muted); font-size: 14px; }
+.options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.opt { position: relative; display: grid; gap: 8px; cursor: pointer; min-width: 0; }
+.opt input { position: absolute; opacity: 0; pointer-events: none; }
+.stage {
+  height: 132px; border-radius: 12px; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.25), transparent 55%), linear-gradient(160deg, var(--grass-a), var(--grass-b));
+  outline: 3px solid transparent; outline-offset: 2px; transition: outline-color .15s;
+}
+.opt-label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 15px; }
+.opt-label em { font-style: normal; font-size: 13px; color: var(--muted); font-weight: 600; }
+.opt input:checked + .stage { outline-color: var(--pick); }
+.opt input:checked ~ .opt-label em { color: var(--pick); }
+.opt input:focus-visible + .stage { outline-color: var(--accent); }
+
+/* ===== Botones en los tres estilos (imitan lo que pinta el juego) ===== */
+.btn { --c: #46c85a; --c2: #1e8232; font-size: 22px; padding: 12px 22px; min-width: 150px; text-align: center; color: #fff; line-height: 1; border-radius: 16px; user-select: none; white-space: nowrap; }
+.btn.small { font-size: 18px; min-width: 110px; padding: 10px 16px; }
+.btn.square { min-width: 0; width: 46px; height: 46px; padding: 0; display: grid; place-items: center; font-size: 22px; }
+.caramelo { font-family: var(--font-gotham); font-weight: 900; background: linear-gradient(var(--c), var(--c2)); border: 3px solid #14141e; box-shadow: inset 0 -7px 0 rgba(0,0,0,.28), inset 0 7px 0 rgba(255,255,255,.22), 0 4px 0 rgba(0,0,0,.25); text-shadow: 0 2px 0 #14141e, 0 0 2px #14141e; }
+.pegatina { font-family: var(--font-display); background: var(--c); border: 4px solid #fff; border-radius: 22px; transform: rotate(-2deg); box-shadow: 4px 5px 0 rgba(20,20,30,.35); text-shadow: 2px 2px 0 #14141e, -1px -1px 0 #14141e, 1px -1px 0 #14141e, -1px 1px 0 #14141e; letter-spacing: .5px; padding-top: 14px; }
+.neon { font-family: var(--font-neon); font-weight: 900; background: rgba(18,16,30,.82); border: 3px solid var(--c); border-radius: 12px; color: color-mix(in srgb, var(--c) 65%, white); text-shadow: 0 0 8px var(--c); box-shadow: 0 0 12px color-mix(in srgb, var(--c) 70%, transparent), inset 0 0 10px color-mix(in srgb, var(--c) 40%, transparent); letter-spacing: 1px; }
+
+/* Botones con icono (columna izquierda del juego) */
+.ibtn { --c: #46c85a; --c2: #1e8232; width: 92px; height: 108px; border-radius: 20px; position: relative; display: grid; grid-template-rows: 1fr auto; justify-items: center; padding: 8px 6px 8px; color: #fff; }
+.ibtn svg { width: 64px; height: 64px; }
+.ibtn span { font-size: 15px; line-height: 1; }
+.ibtn.caramelo span { font-family: var(--font-gotham); font-weight: 900; }
+.ibtn.pegatina span { font-family: var(--font-display); font-weight: 400; }
+.ibtn.neon { color: color-mix(in srgb, var(--c) 65%, white); }
+.ibtn .badge { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; background: #eb323c; border: 2px solid #fff; font: 900 15px/22px var(--font-gotham); text-align: center; color: #fff; text-shadow: none; }
+
+/* Miniaturas */
+.thumbs { display: grid; gap: 16px; }
+.thumb-opt .stage { height: auto; aspect-ratio: 16 / 9; max-width: 100%; background: #000; padding: 0; }
+.thumb-opt svg { width: 100%; height: 100%; display: block; }
+.icons .stage { height: auto; aspect-ratio: 1; background: #000; }
+.icons svg { width: 100%; height: 100%; display: block; }
+.lang { display: inline-flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; margin-bottom: 14px; }
+.lang button { font: 700 14px var(--font-body); border: 0; background: transparent; color: var(--ink); padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.lang button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.names .stage { height: 110px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); text-align: center; padding: 10px; }
+.names .stage b { font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.1; display: block; }
+.names .stage span { font-size: 13px; color: var(--muted); }
+.desc { font-size: 14px; color: var(--muted); margin: 0; }
+
+/* Resultado */
+.result { background: var(--surface); border: 2px solid var(--pick); border-radius: 16px; padding: 18px; display: grid; gap: 12px; }
+.result ul { margin: 0; padding-left: 20px; }
+pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border-radius: 12px; padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.45; }
+.copy { justify-self: start; font: 800 15px var(--font-body); background: var(--accent); color: var(--surface); border: 0; border-radius: 10px; padding: 10px 16px; cursor: pointer; }
+.copy:focus-visible, .lang button:focus-visible { outline: 3px solid var(--pick); outline-offset: 2px; }
+.all { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; font-size: 14px; color: var(--muted); }
+.all button { font: 700 14px var(--font-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+
+@media (max-width: 700px) {
+  .options, .styles-key { grid-template-columns: 1fr; }
+  .stage { height: 112px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Santuario de Bichos Raros: elige tus diseños</h1>
+    <p>Toca la opción que más te guste en cada fila. Abajo del todo se genera el texto para pegar en <code>src/shared/Config/UiStyle.luau</code>, o me dices tus elecciones y lo cambio yo.</p>
+  </header>
+
+  <section aria-labelledby="h-botones">
+    <h2 id="h-botones">Botones</h2>
+    <p class="lead">Los tres estilos ya están programados en el juego. Puedes usar uno para todo o mezclarlos botón a botón.</p>
+    <div class="styles-key">
+      <div><b>Caramelo</b><span>Degradado brillante, contorno oscuro y relieve abajo. Es el que tiene ahora.</span></div>
+      <div><b>Pegatina</b><span>Color plano, borde blanco gordo, letra de cómic y un poco torcido.</span></div>
+      <div><b>Neón</b><span>Fondo oscuro, borde y letras de color que brillan, estilo recreativa.</span></div>
+    </div>
+    <div class="all">Elegir el mismo para todos:
+      <button type="button" data-all="Caramelo">Caramelo</button>
+      <button type="button" data-all="Pegatina">Pegatina</button>
+      <button type="button" data-all="Neon">Neón</button>
+    </div>
+    <div id="button-rows" class="thumbs"></div>
+  </section>
+
+  <section aria-labelledby="h-miniaturas">
+    <h2 id="h-miniaturas">Miniatura (1920 × 1080)</h2>
+    <p class="lead">La imagen grande de la página del juego. Roblox deja subir varias y probarlas entre sí, así que puedes subir las tres y quedarte con la que más clics consiga.</p>
+    <div class="lang" role="group" aria-label="Idioma del texto">
+      <button type="button" data-lang="es" aria-pressed="true">Español</button>
+      <button type="button" data-lang="en" aria-pressed="false">English</button>
+    </div>
+    <div class="thumbs" id="thumb-rows"></div>
+  </section>
+
+  <section aria-labelledby="h-icono">
+    <h2 id="h-icono">Icono (512 × 512)</h2>
+    <p class="lead">El cuadradito que sale en las listas de juegos. Sin texto: se ve muy pequeño.</p>
+    <div class="row icons"><div class="options" id="icon-options"></div></div>
+  </section>
+
+  <section aria-labelledby="h-nombre">
+    <h2 id="h-nombre">Nombre público</h2>
+    <p class="lead">Ninguno se parece a "Steal a…", para que Roblox no lo trate como una copia.</p>
+    <div class="row names"><div class="options" id="name-options"></div></div>
+  </section>
+
+  <section class="result" aria-labelledby="h-res">
+    <h2 id="h-res">Tu elección</h2>
+    <ul id="summary"></ul>
+    <pre id="snippet"></pre>
+    <button type="button" class="copy" id="copy">Copiar el texto para UiStyle.luau</button>
+  </section>
+</div>
+
+<script>
+// ===================== Iconos de los botones laterales =====================
+const ICONS = {
+  Mejoras: `<svg viewBox="0 0 64 64"><rect x="14" y="48" width="36" height="9" rx="4" fill="#ffd746" stroke="#145a23" stroke-width="2"/><rect x="25" y="26" width="14" height="22" rx="3" fill="#fff" stroke="#145a23" stroke-width="2"/><path d="M32 6 L50 28 H14 Z" fill="#fff" stroke="#145a23" stroke-width="2" stroke-linejoin="round"/><path d="M52 10 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill="#fff196"/></svg>`,
+  Tienda: `<svg viewBox="0 0 64 64"><path d="M20 24 a10 10 0 0 1 20 0" fill="none" stroke="#fff" stroke-width="4"/><rect x="10" y="22" width="40" height="32" rx="7" fill="#ff78aa" stroke="#2d1978" stroke-width="2"/><rect x="10" y="28" width="40" height="5" fill="#fff" opacity=".75"/><circle cx="47" cy="47" r="12" fill="#ffcd32" stroke="#965a0a" stroke-width="2"/><text x="47" y="53" text-anchor="middle" font-family="Montserrat,Arial Black" font-weight="900" font-size="16" fill="#a05f0a">$</text></svg>`,
+  Codigos: `<svg viewBox="0 0 64 64"><rect x="10" y="28" width="38" height="28" rx="5" fill="#ff9a3c" stroke="#6e280a" stroke-width="2"/><rect x="7" y="20" width="44" height="10" rx="4" fill="#ff7828" stroke="#6e280a" stroke-width="2"/><rect x="25" y="20" width="8" height="36" fill="#fff078"/><ellipse cx="22" cy="15" rx="7" ry="5" fill="#fff078" stroke="#6e280a" stroke-width="2" transform="rotate(30 22 15)"/><ellipse cx="36" cy="15" rx="7" ry="5" fill="#fff078" stroke="#6e280a" stroke-width="2" transform="rotate(-30 36 15)"/><rect x="40" y="38" width="20" height="20" rx="6" fill="#fff" stroke="#6e280a" stroke-width="2"/><text x="50" y="54" text-anchor="middle" font-family="Montserrat,Arial Black" font-weight="900" font-size="15" fill="#6e280a">#</text></svg>`,
+};
+
+// ===================== Botones del juego =====================
+// kind: "icon" (columna izquierda) o "text". c/c2: colores del juego.
+const BUTTONS = [
+  { key: "Mejoras", name: "MEJORAS", where: "Columna izquierda, tras tu primer bicho", kind: "icon", c: "#46c85a", c2: "#1e8232" },
+  { key: "Tienda", name: "TIENDA", where: "Columna izquierda, tras el primer minuto", kind: "icon", c: "#785aff", c2: "#3c28aa" },
+  { key: "Codigos", name: "CÓDIGOS", where: "Columna izquierda, nuevo", kind: "icon", c: "#ff9632", c2: "#d25a14" },
+  { key: "Ahora", name: "¡AHORA!", where: "Abajo en el centro, durante la barra de captura", kind: "text", c: "#46c85a", c2: "#1e8232" },
+  { key: "Soltar", name: "SOLTAR", where: "Abajo en el centro, mientras llevas un bicho", kind: "text", c: "#e65046", c2: "#a0241e", size: "small" },
+  { key: "Casa", name: "🏠 CASA", where: "Nuevo: de noche, si estás en una bóveda", kind: "text", c: "#5a78e6", c2: "#2c43a8" },
+  { key: "Valla", name: "🛡 VALLA 1.000 💰", where: "Nuevo: cuando alguien pone un cebo en tu santuario", kind: "text", c: "#3cb4e6", c2: "#1778a6", size: "small" },
+  { key: "Comprar", name: "💰 1.250", where: "Precios dentro de MEJORAS y TIENDA", kind: "text", c: "#46c85a", c2: "#1e8232", size: "small" },
+  { key: "Canjear", name: "CANJEAR", where: "Nuevo: dentro de CÓDIGOS", kind: "text", c: "#ff9632", c2: "#d25a14", size: "small" },
+  { key: "Cerrar", name: "X", where: "Cierra los paneles", kind: "text", c: "#e65046", c2: "#a0241e", size: "square" },
+];
+const STYLES = [
+  { id: "Caramelo", label: "Caramelo", cls: "caramelo" },
+  { id: "Pegatina", label: "Pegatina", cls: "pegatina" },
+  { id: "Neon", label: "Neón", cls: "neon" },
+];
+
+const state = { buttons: {}, thumb: "A", icon: "A", name: "A", lang: "es" };
+try { Object.assign(state, JSON.parse(localStorage.getItem("eleccion-santuario") || "{}")); } catch (e) {}
+BUTTONS.forEach(b => { if (!state.buttons[b.key]) state.buttons[b.key] = "Caramelo"; });
+function save() { try { localStorage.setItem("eleccion-santuario", JSON.stringify(state)); } catch (e) {} }
+
+function renderButton(b, s) {
+  const style = `--c:${b.c};--c2:${b.c2}`;
+  if (b.kind === "icon") {
+    return `<div class="ibtn ${s.cls}" style="${style}">${ICONS[b.key]}<span>${b.name}</span><div class="badge">!</div></div>`;
+  }
+  const size = b.size ? " " + b.size : "";
+  return `<div class="btn ${s.cls}${size}" style="${style}">${b.name}</div>`;
+}
+
+const rows = document.getElementById("button-rows");
+rows.innerHTML = BUTTONS.map(b => `
+  <div class="row">
+    <div class="row-head"><h3>${b.name === "X" ? "X (cerrar)" : b.name}</h3><small>${b.where}</small></div>
+    <div class="options">
+      ${STYLES.map(s => `
+        <label class="opt">
+          <input type="radio" name="btn-${b.key}" id="btn-${b.key}-${s.id}" value="${s.id}" ${state.buttons[b.key] === s.id ? "checked" : ""}>
+          <div class="stage">${renderButton(b, s)}</div>
+          <div class="opt-label">${s.label}<em>${state.buttons[b.key] === s.id ? "elegido" : ""}</em></div>
+        </label>`).join("")}
+    </div>
+  </div>`).join("");
+
+// ===================== Bichos en SVG (los mismos del juego) =====================
+function eye(x, y, r) {
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#19191e" stroke-width="${r*0.12}"/><circle cx="${x+r*0.12}" cy="${y+r*0.1}" r="${r*0.55}" fill="#19191e"/><circle cx="${x+r*0.3}" cy="${y-r*0.15}" r="${r*0.18}" fill="#fff"/>`;
+}
+function pez(x, y, s, flip) {
+  const t = `translate(${x} ${y}) scale(${flip ? -s : s} ${s})`;
+  return `<g transform="${t}">
+    <path d="M70 0 L120 -40 L110 0 L120 40 Z" fill="#eb5f1e" stroke="#7a2a08" stroke-width="5" stroke-linejoin="round"/>
+    <g stroke="#7a2a08" stroke-width="5" stroke-linecap="round"><line x1="-20" y1="55" x2="-34" y2="105"/><line x1="25" y1="55" x2="38" y2="105"/></g>
+    <ellipse cx="-38" cy="110" rx="26" ry="13" fill="#fff" stroke="#19191e" stroke-width="4"/><rect x="-64" y="114" width="52" height="7" rx="3" fill="#dc3232"/>
+    <ellipse cx="44" cy="110" rx="26" ry="13" fill="#fff" stroke="#19191e" stroke-width="4"/><rect x="18" y="114" width="52" height="7" rx="3" fill="#dc3232"/>
+    <ellipse cx="0" cy="0" rx="85" ry="62" fill="#ff8c28" stroke="#7a2a08" stroke-width="5"/>
+    <path d="M10 -58 Q22 0 10 58" fill="none" stroke="#eb5f1e" stroke-width="14"/>
+    <path d="M42 -48 Q54 0 42 48" fill="none" stroke="#eb5f1e" stroke-width="12"/>
+    <ellipse cx="-20" cy="22" rx="48" ry="28" fill="#ffe1aa"/>
+    <path d="M-10 -60 L5 -88 L28 -58" fill="#eb5f1e" stroke="#7a2a08" stroke-width="5" stroke-linejoin="round"/>
+    ${eye(-40, -18, 22)}${eye(-2, -22, 20)}
+    <path d="M-78 18 Q-66 30 -54 18" fill="#ff788c" stroke="#7a2a08" stroke-width="4"/>
+  </g>`;
+}
+function tostada(x, y, s, rot) {
+  return `<g transform="translate(${x} ${y}) rotate(${rot||0}) scale(${s})">
+    <path d="M-95 -20 Q-130 -70 -150 -30 Q-120 -30 -95 0Z" fill="#fff" stroke="#9aa6b8" stroke-width="4"/>
+    <path d="M95 -20 Q130 -70 150 -30 Q120 -30 95 0Z" fill="#fff" stroke="#9aa6b8" stroke-width="4"/>
+    <path d="M-80 -60 Q-80 -100 -40 -100 Q0 -120 40 -100 Q80 -100 80 -60 L75 70 Q75 85 60 85 L-60 85 Q-75 85 -75 70Z" fill="#c8823c" stroke="#6e3c14" stroke-width="5"/>
+    <path d="M-62 -55 Q-62 -82 -32 -84 Q0 -100 32 -84 Q62 -82 62 -55 L58 62 L-58 62Z" fill="#f5d28c"/>
+    <rect x="-30" y="-30" width="40" height="22" rx="6" fill="#fff6c8" opacity=".9"/>
+    ${eye(-24, 0, 15)}${eye(22, 0, 15)}
+    <path d="M-14 28 Q0 42 14 28" fill="none" stroke="#19191e" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="-44" cy="26" rx="10" ry="6" fill="#ff8ca0"/><ellipse cx="44" cy="26" rx="10" ry="6" fill="#ff8ca0"/>
+  </g>`;
+}
+function nube(x, y, s) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <path d="M30 70 L0 130 L28 125 L5 190 L70 105 L42 110 L60 70Z" fill="#ffdc28" stroke="#9a6a00" stroke-width="5" stroke-linejoin="round"/>
+    <g fill="#e4e8f5" stroke="#8d93b4" stroke-width="5">
+      <circle cx="-90" cy="10" r="62"/><circle cx="90" cy="10" r="62"/><circle cx="-35" cy="-45" r="62"/><circle cx="40" cy="-55" r="70"/><circle cx="0" cy="25" r="80"/>
+    </g>
+    <g fill="#e4e8f5"><circle cx="-90" cy="10" r="57"/><circle cx="90" cy="10" r="57"/><circle cx="-35" cy="-45" r="57"/><circle cx="40" cy="-55" r="65"/><circle cx="0" cy="25" r="75"/></g>
+    <ellipse cx="0" cy="62" rx="140" ry="26" fill="#aab0cc"/>
+    ${eye(-38, -6, 24)}${eye(38, -6, 24)}
+    <path d="M-66 -40 L-14 -24" stroke="#19191e" stroke-width="9" stroke-linecap="round"/><path d="M66 -40 L14 -24" stroke="#19191e" stroke-width="9" stroke-linecap="round"/>
+    <path d="M-22 40 Q0 26 22 40" fill="none" stroke="#19191e" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="-120" cy="100" r="9" fill="#78b4ff"/><circle cx="-80" cy="120" r="7" fill="#78b4ff"/>
+  </g>`;
+}
+function rana(x, y, s) {
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <line x1="20" y1="-150" x2="20" y2="10" stroke="#78502e" stroke-width="7"/>
+    <path d="M-110 -140 Q20 -250 150 -140 Q120 -160 95 -140 Q70 -165 45 -140 Q20 -165 -5 -140 Q-30 -165 -55 -140 Q-80 -165 -110 -140Z" fill="#ffd232" stroke="#9a6a00" stroke-width="5"/>
+    <circle cx="-30" cy="-180" r="10" fill="#ff7840"/><circle cx="70" cy="-178" r="10" fill="#ff7840"/><circle cx="20" cy="-205" r="8" fill="#ff7840"/>
+    <ellipse cx="0" cy="40" rx="90" ry="62" fill="#5fc85a" stroke="#2a6e28" stroke-width="5"/>
+    <ellipse cx="0" cy="60" rx="55" ry="34" fill="#d7f5aa"/>
+    <circle cx="-38" cy="-12" r="30" fill="#5fc85a" stroke="#2a6e28" stroke-width="5"/><circle cx="38" cy="-12" r="30" fill="#5fc85a" stroke="#2a6e28" stroke-width="5"/>
+    ${eye(-38, -14, 20)}${eye(38, -14, 20)}
+    <path d="M-40 30 Q0 50 40 30" fill="none" stroke="#19191e" stroke-width="6" stroke-linecap="round"/>
+    <ellipse cx="-50" cy="105" rx="28" ry="16" fill="#dc3232" stroke="#7a1414" stroke-width="4"/><ellipse cx="50" cy="105" rx="28" ry="16" fill="#dc3232" stroke="#7a1414" stroke-width="4"/>
+  </g>`;
+}
+function coin(x, y, r) {
+  return `<g transform="translate(${x} ${y})"><circle r="${r}" fill="#ffcd32" stroke="#965a0a" stroke-width="${r*0.14}"/><circle r="${r*0.7}" fill="none" stroke="#ffe682" stroke-width="${r*0.1}"/><text y="${r*0.38}" text-anchor="middle" font-family="Montserrat,Arial Black" font-weight="900" font-size="${r*1.1}" fill="#a05f0a">$</text></g>`;
+}
+function net(x, y, s, rot) {
+  return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">
+    <rect x="-10" y="70" width="20" height="260" rx="8" fill="#a0642d" stroke="#5a3214" stroke-width="5"/>
+    <ellipse cx="0" cy="-10" rx="95" ry="85" fill="rgba(255,255,255,.18)" stroke="#5a3214" stroke-width="14"/>
+    <g stroke="#fff" stroke-width="4" opacity=".75"><path d="M-80 -50 L80 40"/><path d="M-90 0 L60 70"/><path d="M-60 -80 L90 -10"/><path d="M80 -50 L-80 40"/><path d="M90 0 L-60 70"/><path d="M60 -80 L-90 -10"/></g>
+  </g>`;
+}
+function stroked(text, x, y, size, fill, anchor, rot) {
+  const a = anchor || "start";
+  return `<g transform="rotate(${rot||0} ${x} ${y})"><text x="${x}" y="${y+8}" text-anchor="${a}" font-family="Luckiest Guy, Arial Black" font-size="${size}" fill="#14141e" opacity=".55">${text}</text>
+    <text x="${x}" y="${y}" text-anchor="${a}" font-family="Luckiest Guy, Arial Black" font-size="${size}" fill="${fill}" stroke="#14141e" stroke-width="${size*0.12}" paint-order="stroke" stroke-linejoin="round">${text}</text></g>`;
+}
+function sparkle(x, y, r, color) {
+  return `<path transform="translate(${x} ${y})" d="M0 ${-r} L${r*0.22} ${-r*0.22} L${r} 0 L${r*0.22} ${r*0.22} L0 ${r} L${-r*0.22} ${r*0.22} L${-r} 0 L${-r*0.22} ${-r*0.22}Z" fill="${color}"/>`;
+}
+
+// ===================== Miniaturas =====================
+const TEXT = {
+  es: { A1: "BICHOS", A2: "RAROS", Ab: "¡ATRAPA EL MÁS RARO!", B1: "¡LEGENDARIO!", Bb: "CADA 8 MINUTOS", C1: "TU SANTUARIO", Cb: "DE BICHOS RAROS", Cs: "+2.500/s" },
+  en: { A1: "WEIRD", A2: "CRITTERS", Ab: "CATCH THE WEIRDEST ONE!", B1: "LEGENDARY!", Bb: "EVERY 8 MINUTES", C1: "YOUR SANCTUARY", Cb: "OF WEIRD CRITTERS", Cs: "+2,500/s" },
+};
+function thumbA(t) {
+  return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ec8ff"/><stop offset="1" stop-color="#bdf0ff"/></linearGradient>
+  <radialGradient id="sunA" cx=".82" cy=".18" r=".5"><stop offset="0" stop-color="#fff7c0"/><stop offset="1" stop-color="#fff7c0" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1920" height="1080" fill="url(#skyA)"/><rect width="1920" height="1080" fill="url(#sunA)"/>
+  <g fill="#fff" opacity=".9"><ellipse cx="300" cy="160" rx="140" ry="45"/><ellipse cx="380" cy="135" rx="90" ry="50"/><ellipse cx="1500" cy="110" rx="160" ry="40"/></g>
+  <path d="M0 560 Q480 520 960 560 T1920 550 V700 H0Z" fill="#2896dc"/>
+  <path d="M0 620 Q480 590 960 625 T1920 615 V1080 H0Z" fill="#f2d28c"/>
+  <path d="M0 640 Q300 660 700 640" fill="none" stroke="#fff" stroke-width="10" opacity=".7"/>
+  <g transform="translate(1660 560)"><rect x="-12" y="-260" width="24" height="270" fill="#a0642d" transform="rotate(8)"/><g fill="#3cb44b"><ellipse cx="20" cy="-270" rx="140" ry="34" transform="rotate(-20 20 -270)"/><ellipse cx="40" cy="-270" rx="140" ry="34" transform="rotate(25 40 -270)"/><ellipse cx="30" cy="-280" rx="120" ry="30" transform="rotate(80 30 -280)"/></g></g>
+  ${coin(1230, 860, 46)}${coin(1460, 840, 52)}${coin(560, 960, 34)}${coin(1110, 560, 30)}
+  ${tostada(1400, 330, 1.25, 12)}
+  ${pez(820, 700, 2.4, true)}
+  <g stroke="#fff" stroke-width="12" stroke-linecap="round" opacity=".8"><line x1="1120" y1="640" x2="1260" y2="640"/><line x1="1150" y1="720" x2="1320" y2="720"/><line x1="1120" y1="800" x2="1240" y2="800"/></g>
+  ${net(330, 640, 1.55, -28)}
+  ${stroked(t.A1, 70, 210, 190, "#ffd232", "start", -4)}
+  ${stroked(t.A2, 90, 390, 190, "#ff6a3c", "start", -4)}
+  <g transform="translate(1460 1000) rotate(-3)"><rect x="-430" y="-62" width="860" height="110" rx="55" fill="#14141e"/><text x="0" y="14" text-anchor="middle" font-family="Luckiest Guy, Arial Black" font-size="60" fill="#fff">${t.Ab}</text></g>
+  ${sparkle(1180, 230, 40, "#fff")}${sparkle(1640, 420, 28, "#fff6a0")}
+  </svg>`;
+}
+function thumbB(t) {
+  let rays = "";
+  for (let i = 0; i < 18; i++) rays += `<path d="M960 560 L${960 + 2200 * Math.cos(i / 18 * Math.PI * 2)} ${560 + 2200 * Math.sin(i / 18 * Math.PI * 2)} L${960 + 2200 * Math.cos((i + 0.5) / 18 * Math.PI * 2)} ${560 + 2200 * Math.sin((i + 0.5) / 18 * Math.PI * 2)}Z" fill="#ffd25a" opacity=".13"/>`;
+  return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs><radialGradient id="bgB" cx=".5" cy=".52" r=".75"><stop offset="0" stop-color="#7a3cc8"/><stop offset=".55" stop-color="#3a1670"/><stop offset="1" stop-color="#160828"/></radialGradient>
+  <radialGradient id="glowB" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe680" stop-opacity=".95"/><stop offset="1" stop-color="#ffb428" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1920" height="1080" fill="url(#bgB)"/>${rays}
+  <ellipse cx="960" cy="560" rx="560" ry="430" fill="url(#glowB)"/>
+  ${nube(960, 520, 2.3)}
+  <g transform="translate(960 175)"><path d="M-120 40 L-140 -60 L-70 -10 L0 -90 L70 -10 L140 -60 L120 40Z" fill="#ffd232" stroke="#9a6a00" stroke-width="10" stroke-linejoin="round"/><circle cx="0" cy="-92" r="16" fill="#ff5a78"/><circle cx="-140" cy="-62" r="12" fill="#5ac8ff"/><circle cx="140" cy="-62" r="12" fill="#5ac8ff"/></g>
+  ${pez(330, 860, 1.1, false)}${tostada(1600, 820, 0.9, -10)}
+  <g stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".6"><line x1="470" y1="820" x2="560" y2="820"/><line x1="460" y1="880" x2="580" y2="880"/><line x1="1450" y1="800" x2="1370" y2="800"/></g>
+  ${stroked(t.B1, 960, 1000, 170, "#ffd232", "middle", 0)}
+  <g transform="translate(1660 150) rotate(8)"><rect x="-230" y="-55" width="460" height="100" rx="20" fill="#ff3c5a" stroke="#fff" stroke-width="8"/><text x="0" y="16" text-anchor="middle" font-family="Luckiest Guy, Arial Black" font-size="50" fill="#fff">${t.Bb}</text></g>
+  ${sparkle(560, 260, 50, "#fff")}${sparkle(1380, 330, 36, "#ffe680")}${sparkle(470, 520, 26, "#ffe680")}${sparkle(1500, 600, 30, "#fff")}
+  </svg>`;
+}
+function thumbC(t) {
+  const pedestal = (x, y, inner) => `<g transform="translate(${x} ${y})"><ellipse cx="0" cy="40" rx="130" ry="40" fill="#8c867e"/><rect x="-130" y="-10" width="260" height="50" fill="#a59e96"/><ellipse cx="0" cy="-10" rx="130" ry="40" fill="#ebe1c8" stroke="#8c867e" stroke-width="6"/>${inner}</g>`;
+  return `<svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="skyC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb46e"/><stop offset="1" stop-color="#ffe2a8"/></linearGradient></defs>
+  <rect width="1920" height="1080" fill="url(#skyC)"/>
+  <path d="M0 470 Q500 420 960 460 T1920 440 V1080 H0Z" fill="#82c85a"/>
+  <path d="M120 560 L1800 560 L1920 1080 L0 1080Z" fill="#a59e96"/><path d="M180 590 L1740 590 L1860 1080 L60 1080Z" fill="#8cd264"/>
+  <g fill="#ffeb9a">${[260,600,960,1320,1660].map(x => `<rect x="${x-10}" y="420" width="20" height="150" fill="#5a5a64"/><circle cx="${x}" cy="410" r="24"/>`).join("")}</g>
+  ${pedestal(380, 760, pez(0, -120, 0.85, false))}
+  ${pedestal(800, 700, tostada(0, -130, 0.8, 0))}
+  ${pedestal(1220, 700, rana(0, -110, 0.65))}
+  ${pedestal(1600, 760, nube(0, -150, 0.62))}
+  ${coin(500, 520, 34)}${coin(880, 460, 30)}${coin(1420, 430, 36)}${coin(1720, 470, 32)}${coin(1080, 380, 26)}
+  <g transform="translate(960 975)"><rect x="-390" y="-80" width="780" height="130" rx="30" fill="#14141e" opacity=".85"/><text x="0" y="22" text-anchor="middle" font-family="Sarpanch, Arial Narrow" font-weight="900" font-size="104" fill="#ffe628" stroke="#ff8c00" stroke-width="3" paint-order="stroke">⚡ ${t.Cs}</text></g>
+  ${stroked(t.C1, 960, 175, 150, "#ffffff", "middle", 0)}
+  ${stroked(t.Cb, 960, 310, 110, "#ffd232", "middle", 0)}
+  </svg>`;
+}
+// Iconos 512
+function iconA() {
+  return `<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="iA" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#7ee0ff"/><stop offset="1" stop-color="#1e8ad2"/></radialGradient></defs>
+  <rect width="512" height="512" fill="url(#iA)"/><circle cx="256" cy="560" r="230" fill="#f2d28c"/>${coin(90, 420, 38)}${coin(430, 400, 30)}${pez(270, 250, 1.75, true)}${sparkle(420, 90, 30, "#fff")}</svg>`;
+}
+function iconB() {
+  return `<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="iB" cx=".5" cy=".5" r=".7"><stop offset="0" stop-color="#9a5ae6"/><stop offset="1" stop-color="#2a0f50"/></radialGradient><radialGradient id="iBg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe680" stop-opacity=".9"/><stop offset="1" stop-color="#ffb428" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" fill="url(#iB)"/><circle cx="256" cy="270" r="230" fill="url(#iBg)"/>${nube(256, 270, 1.2)}
+  <g transform="translate(256 92)"><path d="M-70 24 L-82 -36 L-40 -6 L0 -54 L40 -6 L82 -36 L70 24Z" fill="#ffd232" stroke="#9a6a00" stroke-width="7" stroke-linejoin="round"/></g>${sparkle(80, 120, 26, "#fff")}${sparkle(440, 400, 22, "#ffe680")}</svg>`;
+}
+function iconC() {
+  return `<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="iC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffcf5a"/><stop offset="1" stop-color="#ff7a3c"/></linearGradient></defs>
+  <rect width="512" height="512" fill="url(#iC)"/>${tostada(250, 250, 1.15, -8)}${net(360, 330, 0.95, 35)}${coin(90, 430, 34)}${sparkle(90, 100, 28, "#fff")}</svg>`;
+}
+
+const THUMBS = [
+  { id: "A", title: "A · Playa en marcha", desc: "Acción y color: el Pez con Piernas huye de la red. Comunica el juego en un vistazo.", fn: thumbA },
+  { id: "B", title: "B · ¡Legendario!", desc: "El evento del servidor: la Nube Gruñona con corona y rayos. Despierta curiosidad.", fn: thumbB },
+  { id: "C", title: "C · Mi santuario", desc: "La colección en sus pedestales y el contador de monedas. Vende la idea de progresar.", fn: thumbC },
+];
+const ICONS512 = [
+  { id: "A", title: "A · Pez con Piernas", desc: "Cara grande, fondo azul de playa.", fn: iconA },
+  { id: "B", title: "B · Nube coronada", desc: "Morado y dorado: se distingue en la lista.", fn: iconB },
+  { id: "C", title: "C · Tostada y red", desc: "Naranja cálido con la red de captura.", fn: iconC },
+];
+const NAMES = [
+  { id: "A", title: "Santuario de Bichos Raros", sub: "En español, el que ya usas", desc: "Claro y propio. Roblox lo traduce solo para otros idiomas." },
+  { id: "B", title: "Weird Critter Sanctuary", sub: "En inglés, como dice el diseño", desc: "Llega a más jugadores en la búsqueda. Buscable como \"critter\"." },
+  { id: "C", title: "Catch Weird Critters! 🐟", sub: "En inglés, con verbo y emoji", desc: "Dice qué se hace. El emoji llama la atención en las listas." },
+];
+
+function renderThumbs() {
+  const t = TEXT[state.lang];
+  document.getElementById("thumb-rows").innerHTML = THUMBS.map(th => `
+    <div class="row thumb-opt">
+      <label class="opt">
+        <input type="radio" name="thumb" id="thumb-${th.id}" value="${th.id}" ${state.thumb === th.id ? "checked" : ""}>
+        <div class="stage" id="thumb-stage-${th.id}">${th.fn(t)}</div>
+        <div class="opt-label">${th.title}<em>${state.thumb === th.id ? "elegida" : ""}</em></div>
+      </label>
+      <p class="desc">${th.desc}</p>
+    </div>`).join("");
+}
+document.getElementById("icon-options").innerHTML = ICONS512.map(ic => `
+  <label class="opt">
+    <input type="radio" name="icon" id="icon-${ic.id}" value="${ic.id}" ${state.icon === ic.id ? "checked" : ""}>
+    <div class="stage" id="icon-stage-${ic.id}">${ic.fn()}</div>
+    <div class="opt-label">${ic.title}<em>${state.icon === ic.id ? "elegido" : ""}</em></div>
+    <p class="desc">${ic.desc}</p>
+  </label>`).join("");
+document.getElementById("name-options").innerHTML = NAMES.map(n => `
+  <label class="opt">
+    <input type="radio" name="name" id="name-${n.id}" value="${n.id}" ${state.name === n.id ? "checked" : ""}>
+    <div class="stage"><div><b>${n.title}</b><span>${n.sub}</span></div></div>
+    <div class="opt-label">Opción ${n.id}<em>${state.name === n.id ? "elegido" : ""}</em></div>
+    <p class="desc">${n.desc}</p>
+  </label>`).join("");
+renderThumbs();
+
+function refreshMarks() {
+  document.querySelectorAll(".opt").forEach(opt => {
+    const input = opt.querySelector("input");
+    const em = opt.querySelector(".opt-label em");
+    if (em) em.textContent = input.checked ? (input.name === "thumb" ? "elegida" : "elegido") : "";
+  });
+}
+function renderResult() {
+  const lines = BUTTONS.map(b => `\t${b.key} = "${state.buttons[b.key]}",`).join("\n");
+  const counts = {};
+  BUTTONS.forEach(b => counts[state.buttons[b.key]] = (counts[state.buttons[b.key]] || 0) + 1);
+  const main = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  document.getElementById("snippet").textContent =
+`UiStyle.default = "${main}" :: Style
+
+UiStyle.Buttons = {
+${lines}
+} :: { [string]: Style? }`;
+  const th = THUMBS.find(x => x.id === state.thumb), ic = ICONS512.find(x => x.id === state.icon), nm = NAMES.find(x => x.id === state.name);
+  document.getElementById("summary").innerHTML =
+    `<li>Botones: ${Object.entries(counts).map(([k, v]) => `${v} en ${k === "Neon" ? "Neón" : k}`).join(", ")}</li>
+     <li>Miniatura: ${th.title} (${state.lang === "es" ? "español" : "inglés"})</li>
+     <li>Icono: ${ic.title}</li>
+     <li>Nombre: ${nm.title}</li>`;
+}
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement)) return;
+  if (el.name.startsWith("btn-")) state.buttons[el.name.slice(4)] = el.value;
+  else if (el.name === "thumb") state.thumb = el.value;
+  else if (el.name === "icon") state.icon = el.value;
+  else if (el.name === "name") state.name = el.value;
+  save(); refreshMarks(); renderResult();
+});
+document.querySelectorAll("[data-all]").forEach(btn => btn.addEventListener("click", () => {
+  BUTTONS.forEach(b => {
+    state.buttons[b.key] = btn.dataset.all;
+    const input = document.getElementById(`btn-${b.key}-${btn.dataset.all}`);
+    if (input) input.checked = true;
+  });
+  save(); refreshMarks(); renderResult();
+}));
+document.querySelectorAll("[data-lang]").forEach(btn => btn.addEventListener("click", () => {
+  state.lang = btn.dataset.lang;
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b === btn)));
+  save(); renderThumbs(); renderResult();
+}));
+document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === state.lang)));
+renderThumbs();
+document.getElementById("copy").addEventListener("click", () => {
+  const text = document.getElementById("snippet").textContent;
+  const btn = document.getElementById("copy");
+  navigator.clipboard.writeText(text).then(() => { btn.textContent = "Copiado"; setTimeout(() => btn.textContent = "Copiar el texto para UiStyle.luau", 1500); })
+    .catch(() => { const r = document.createRange(); r.selectNodeContents(document.getElementById("snippet")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); });
+});
+renderResult();
+window.__santuario = { thumbA, thumbB, thumbC, iconA, iconB, iconC, TEXT };
+</script>
