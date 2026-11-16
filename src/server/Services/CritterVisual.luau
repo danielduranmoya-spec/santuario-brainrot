@@ -1,13 +1,16 @@
 --!strict
 -- Aspecto de un bicho: una pieza raíz invisible (la que se mueve, se suelda al jugador y lleva el
--- ProximityPrompt) con el modelo low-poly de CritterArt soldado encima, un aro del color de su
+-- ProximityPrompt) con el modelo por piezas de CritterArt soldado encima, un aro del color de su
 -- rareza en el suelo, luz para Raro o más, chispas para Épico y Legendario, y su etiqueta.
+-- Las mutaciones (Config/Mutations) cambian su tamaño y lo repintan: material, color, luz y partículas.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config")
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
+local Art = require(Config:WaitForChild("Art"))
+local MutationMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MutationMath"))
 
 local CritterArt = require(script.Parent:WaitForChild("CritterArt"))
 
@@ -16,6 +19,33 @@ type CritterDef = CrittersConfig.Critter
 local CritterVisual = {}
 
 local SPARKLES_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local SMOKE_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
+
+-- Repinta una pieza con el color de la mutación. Los ojos (`keep`) y los párpados no cambian.
+local function applyColor(part: BasePart, spec: CritterArt.PartSpec, look: MutationMath.ColorDef)
+	local tint = look.tint
+	if not tint or spec.keep then
+		return
+	end
+	part.Color = tint:Lerp(spec.color, look.blend or 0)
+	if look.material then
+		part.Material = look.material
+	end
+	if look.reflectance then
+		part.Reflectance = look.reflectance
+	end
+	if spec.name == "Parpado" then
+		return -- sigue invisible hasta que parpadea
+	end
+	if look.transparency then
+		part.Transparency = math.max(part.Transparency, look.transparency)
+	end
+	if look.rainbow then
+		-- El cliente gira el tono a partir de este desfase (client/CritterAnimator).
+		local hue = spec.color:ToHSV()
+		part:SetAttribute("RainbowOffset", hue)
+	end
+end
 
 local function newText(name: string, parent: Instance, position: UDim2, color: Color3, text: string): TextLabel
 	local label = Instance.new("TextLabel")
@@ -51,6 +81,9 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	end
 	part.Color = spec.color
 	part.Material = spec.material or Enum.Material.SmoothPlastic
+	if spec.reflectance then
+		part.Reflectance = spec.reflectance
+	end
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.CanCollide = false
@@ -60,6 +93,14 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	part.Massless = true
 	local rot = spec.rot or Vector3.zero
 	local offset = CFrame.new(spec.pos * scale) * CFrame.Angles(math.rad(rot.X), math.rad(rot.Y), math.rad(rot.Z))
+	local rot2 = spec.rot2
+	if rot2 then
+		offset *= CFrame.Angles(math.rad(rot2.X), math.rad(rot2.Y), math.rad(rot2.Z))
+	end
+	-- Punto de giro de las piezas animadas (alas, colas, mandíbulas...), para el cliente.
+	if spec.pivot then
+		part:SetAttribute("Pivot", spec.pivot * scale)
+	end
 	part.CFrame = root.CFrame * offset
 	-- Weld clásico con desplazamiento fijo: la pieza sigue a la raíz aunque la raíz se coloque
 	-- antes de estar en el Workspace (un WeldConstraint ahí se quedaría con la posición vieja).
@@ -72,9 +113,18 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	return part
 end
 
-function CritterVisual.create(def: CritterDef): Part
+-- `color` y `size` son las mutaciones (nil = Normal). En el santuario (`inSanctuary`) los bichos
+-- grandes se dibujan algo más pequeños para no pisar los pedestales vecinos.
+function CritterVisual.create(def: CritterDef, color: string?, sizeId: string?, inSanctuary: boolean?): Part
 	local rarity = CrittersConfig.Rarities[def.rarity]
-	local size = Gameplay.CritterSizes[def.rarity]
+	local look = MutationMath.color(color)
+	local sizeDef = MutationMath.size(sizeId)
+	local baseSize = Gameplay.CritterSizes[def.rarity]
+	local size = baseSize * (if inSanctuary then sizeDef.sanctuaryScale else sizeDef.scale)
+	if inSanctuary then
+		-- Nunca más ancho que la distancia entre pedestales (salvo que ya lo fuera de base).
+		size = math.min(size, math.max(baseSize, Gameplay.Sanctuary.slotSpacing))
+	end
 
 	-- Raíz invisible: es la "caja" del bicho para moverlo, soldarlo y el aviso Atrapar.
 	local root = Instance.new("Part")
@@ -88,16 +138,50 @@ function CritterVisual.create(def: CritterDef): Part
 	root.CastShadow = false
 	root:SetAttribute("CritterId", def.id)
 	root:SetAttribute("Rarity", def.rarity)
+	root:SetAttribute("MutationColor", look.id)
+	root:SetAttribute("MutationSize", sizeDef.id)
+	if look.rainbow then
+		root:SetAttribute("Rainbow", true)
+	end
 
 	local specs = CritterArt[def.id]
 	if specs then
 		for _, spec in specs do
-			detailPart(root, spec, size)
+			-- Los adornos pequeños se pueden quitar para aligerar (Config/Art.critterDetail).
+			if not spec.fine or Art.critterDetail >= 2 then
+				applyColor(detailPart(root, spec, size), spec, look)
+			end
 		end
 	else
 		-- Sin modelo todavía: bola del color de la rareza para que se vea igual.
 		root.Transparency = 0
-		root.Color = rarity.color
+		root.Color = if look.tint then look.tint else rarity.color
+	end
+
+	-- Aura y partículas de la mutación de color.
+	if look.light then
+		local aura = Instance.new("PointLight")
+		aura.Name = "AuraMutacion"
+		aura.Color = look.light
+		aura.Range = size * 2.2
+		aura.Brightness = 1.6
+		aura.Parent = root
+	end
+	local particles = look.particles
+	if particles then
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = "Mutacion"
+		emitter.Texture = if particles.smoke then SMOKE_TEXTURE else SPARKLES_TEXTURE
+		emitter.Color = ColorSequence.new(particles.color)
+		emitter.LightEmission = if particles.smoke then 0.3 else 1
+		emitter.Rate = particles.rate
+		emitter.Lifetime = NumberRange.new(0.9, 1.6)
+		emitter.Speed = NumberRange.new(0.6, 1.6)
+		emitter.SpreadAngle = if particles.smoke then Vector2.new(25, 25) else Vector2.new(180, 180)
+		emitter.Acceleration = if particles.smoke then Vector3.new(0, 2, 0) else Vector3.zero
+		emitter.Transparency = NumberSequence.new(if particles.smoke then 0.5 else 0, 1)
+		emitter.Size = if particles.smoke then NumberSequence.new(size * 0.18, size * 0.4) else NumberSequence.new(size * 0.14, 0)
+		emitter.Parent = root
 	end
 
 	-- Aro de rareza en el suelo (siempre visible, barato).
@@ -141,7 +225,8 @@ function CritterVisual.create(def: CritterDef): Part
 	gui.MaxDistance = Gameplay.Spawning.labelMaxDistance
 	gui.LightInfluence = 0
 	gui.Parent = root
-	newText("Nombre", gui, UDim2.fromScale(0, 0), Color3.new(1, 1, 1), def.name)
+	local nameColor = if look.rainbow then Color3.new(1, 1, 1) elseif look.light then look.light elseif look.tint then look.tint else Color3.new(1, 1, 1)
+	newText("Nombre", gui, UDim2.fromScale(0, 0), nameColor, MutationMath.displayName(def.name, color, sizeId))
 	newText("Detalle", gui, UDim2.fromScale(0, 0.5), rarity.color, rarity.label)
 
 	return root

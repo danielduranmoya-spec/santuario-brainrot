@@ -22,6 +22,8 @@ local VaultMath = require(Shared:WaitForChild("VaultMath"))
 local Effects = require(script.Parent:WaitForChild("Effects"))
 local Ambience = require(script.Parent:WaitForChild("Ambience"))
 local CritterAnimator = require(script.Parent:WaitForChild("CritterAnimator"))
+local ButtonStyle = require(script.Parent:WaitForChild("ButtonStyle"))
+local LiveHud = require(script.Parent:WaitForChild("LiveHud"))
 
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local StartMinigame = remotes:WaitForChild("StartMinigame") :: RemoteEvent
@@ -83,23 +85,17 @@ local function newLabel(name: string, size: UDim2, position: UDim2, parent: Inst
 	return label
 end
 
+-- El estilo de cada botón sale de Config/UiStyle (su nombre `name` es la clave).
 local function newButton(name: string, size: UDim2, position: UDim2, color: Color3): TextButton
 	local button = Instance.new("TextButton")
 	button.Name = name
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.Size = size
 	button.Position = position
-	button.BackgroundColor3 = color
-	button.TextColor3 = Color3.new(1, 1, 1)
-	button.Font = Enum.Font.GothamBlack
 	button.TextScaled = true
 	button.Visible = false
 	button.Parent = gui
-	addCorner(button)
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 3
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = button
+	ButtonStyle.text(button, name, color)
 	local limit = Instance.new("UISizeConstraint")
 	limit.MaxSize = Vector2.new(420, 130)
 	limit.Parent = button
@@ -218,20 +214,6 @@ nextPadding.PaddingTop = UDim.new(0.15, 0)
 nextPadding.PaddingBottom = UDim.new(0.15, 0)
 nextPadding.Parent = nextText
 
--- Día y noche: cuenta atrás abajo a la derecha.
-local dayLabel = newLabel("DiaNoche", UDim2.fromScale(0.18, 0.065), UDim2.new(1, -12, 1, CORNER_LIFT), gui)
-dayLabel.AnchorPoint = Vector2.new(1, 1)
-dayLabel.Text = "☀ 5:00"
-local dayLimit = Instance.new("UISizeConstraint")
-dayLimit.MinSize = Vector2.new(130, 40)
-dayLimit.MaxSize = Vector2.new(230, 60)
-dayLimit.Parent = dayLabel
-local dayStroke = Instance.new("UIStroke")
-dayStroke.Thickness = 2
-dayStroke.Transparency = 0.3
-dayStroke.Color = Color3.fromRGB(255, 230, 120)
-dayStroke.Parent = dayLabel
-
 local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.12), gui)
 hintLabel.Visible = false
 
@@ -280,7 +262,6 @@ local minigame: MinigameData? = nil
 local waitingResult = false
 local hasCaught = false
 local hasCollected = false
-local nightWarned = false
 local toastId = 0
 
 local function showToast(text: string, color: Color3?)
@@ -481,6 +462,9 @@ Menus.Start()
 VaultDoors.Start()
 Ambience.Start()
 CritterAnimator.Start()
+LiveHud.Start(gui, function(text: string, color: Color3?)
+	showToast(text, color)
+end)
 
 local function tryCatch()
 	if minigame and not waitingResult then
@@ -541,30 +525,8 @@ RunService.RenderStepped:Connect(function()
 		updateGuide(nil)
 	end
 
-	-- Día y noche.
-	local night = ReplicatedStorage:GetAttribute("IsNight") == true
-	local endsAt = (ReplicatedStorage:GetAttribute("PhaseEndsAt") :: number?) or 0
-	local left = math.max(0, math.ceil(endsAt - Workspace:GetServerTimeNow()))
-	local clock = string.format("%d:%02d", left // 60, left % 60)
-	local warning = (ReplicatedStorage:GetAttribute("NightWarningSeconds") :: number?) or 0
-	dayLabel.Text = (if night then "🌙 Noche " else "☀ Día ") .. clock
-	dayLabel.TextColor3 = if night then Color3.fromRGB(170, 190, 255) elseif left <= warning then COLOR_BAD else Color3.fromRGB(255, 230, 120)
-
-	-- Aviso de que anochece: sonido, mensaje y el reloj parpadea en rojo.
-	local warningNow = not night and left > 0 and left <= warning
-	if warningNow and not nightWarned then
-		nightWarned = true
-		Effects.Play("alerta_noche")
-		showToast("⚠ ¡Anochece en " .. left .. " segundos! Los bichos se dormirán y volverás a tu santuario.", COLOR_BAD)
-	elseif not warningNow then
-		nightWarned = false
-	end
-	dayLabel.BackgroundColor3 = if warningNow and (os.clock() % 0.6) < 0.3 then COLOR_BAD else COLOR_DARK
-
 	local hint: string? = nil
-	if night then
-		hint = "🌙 Los bichos duermen: espera a que amanezca (" .. clock .. ")"
-	elseif carrying then
+	if carrying then
 		hint = "🏠 Lleva el bicho a tu santuario (sigue el rayo amarillo)"
 	elseif not hasCaught then
 		hint = "👉 Acércate a un bicho y pulsa Atrapar"
@@ -572,8 +534,6 @@ RunService.RenderStepped:Connect(function()
 		hint = "💰 Pisa la plataforma dorada de tu santuario para cobrar"
 	elseif canAfford then
 		hint = "🔓 ¡Ya puedes abrir la bóveda " .. nextVault .. "! Sigue el rayo amarillo"
-	elseif left <= warning then
-		hint = "⚠ ¡Anochece en " .. clock .. "! Date prisa"
 	end
 	hintLabel.Visible = hint ~= nil and current == nil
 	hintLabel.Text = hint or ""

@@ -10,20 +10,14 @@ export type Sound = { id: number, volume: number, note: string }
 local Audio = {}
 
 -- Música clásica (las obras son de dominio público y estas grabaciones son de la biblioteca de
--- audio de Roblox, de socios con licencia para cualquier experiencia). Una de día y otra de noche;
--- el cliente hace un fundido al cambiar (Config/Events.DayNight.musicFadeSeconds).
+-- audio de Roblox, de socios con licencia para cualquier experiencia).
+-- Otra opción tranquila: 9045766377 (Satie, Gymnopédie n.º 1, piano, APMOfficial, 2:32).
 Audio.Music = {
 	-- Día: alegre y ligera. Alternativa: 1843596713 (Mozart, Eine kleine Nachtmusik III. Menuetto, APMOfficial, 2:03)
-	dia = {
+	fondo = {
 		id = 1837488380,
 		volume = 0.22,
 		note = "Mozart · Eine kleine Nachtmusik KV 525, IV. Rondo: Allegro · APMOfficial · 2:48",
-	},
-	-- Noche: tranquila, piano. Alternativa: 1838457617 (Debussy, Clair de lune, APMOfficial, 4:22)
-	noche = {
-		id = 9045766377,
-		volume = 0.28,
-		note = "Satie · Gymnopédie n.º 1 (piano) · APMOfficial · 2:32",
 	},
 }
 
@@ -37,8 +31,8 @@ Audio.Sfx = {
 	compra = { id = 1844692556, volume = 0.45, note = "Game Show · APMOfficial" },
 	recompensa = { id = 1845411858, volume = 0.45, note = "Top Prize · APMOfficial" },
 	click = { id = 15675059323, volume = 0.4, note = "Roblox_UI_Bright_Click · Roblox" },
-	-- Aviso de que quedan 10 s para la noche. Alternativa: 9113421646 (Bell Rings 1, ProSoundEffects)
-	alerta_noche = { id = 9116395089, volume = 0.6, note = "Magic Glows Soft Clusters Of Chiming Hits 4 · ProSoundEffects" },
+	-- Aviso (te están poniendo un cebo). Alternativa: 9113421646 (Bell Rings 1, ProSoundEffects)
+	alerta = { id = 9116395089, volume = 0.6, note = "Magic Glows Soft Clusters Of Chiming Hits 4 · ProSoundEffects" },
 	-- Fiesta al capturar (suena junto con captura_ok). Remate corto de premio.
 	confeti = { id = 9040476898, volume = 0.35, note = "Early Bird - Hit1 · APMOfficial" },
 }

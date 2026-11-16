@@ -40,8 +40,18 @@ Art.ambience = {
 	BosqueRuidoso = { color = Color3.fromRGB(170, 220, 170), density = 0.35, decay = Color3.fromRGB(90, 140, 90), haze = 1.5, tint = Color3.fromRGB(235, 255, 235) },
 	VolcanTimido = { color = Color3.fromRGB(255, 170, 130), density = 0.4, decay = Color3.fromRGB(160, 70, 50), haze = 2, tint = Color3.fromRGB(255, 225, 205) },
 	NubePegajosa = { color = Color3.fromRGB(255, 225, 250), density = 0.3, decay = Color3.fromRGB(220, 190, 240), haze = 1.5, tint = Color3.fromRGB(250, 240, 255) },
+	PantanoCristal = { color = Color3.fromRGB(150, 225, 215), density = 0.4, decay = Color3.fromRGB(60, 130, 130), haze = 2, tint = Color3.fromRGB(225, 255, 250) },
+	RelojeriaAbandonada = { color = Color3.fromRGB(230, 200, 150), density = 0.38, decay = Color3.fromRGB(140, 105, 70), haze = 2, tint = Color3.fromRGB(255, 240, 215) },
+	ValleTitanes = { color = Color3.fromRGB(190, 210, 190), density = 0.35, decay = Color3.fromRGB(100, 120, 105), haze = 1.5, tint = Color3.fromRGB(240, 250, 240) },
+	ObservatorioAstral = { color = Color3.fromRGB(120, 130, 220), density = 0.4, decay = Color3.fromRGB(50, 50, 120), haze = 1.5, tint = Color3.fromRGB(220, 225, 255) },
+	SantuarioEclipse = { color = Color3.fromRGB(90, 85, 120), density = 0.45, decay = Color3.fromRGB(30, 25, 50), haze = 2.5, tint = Color3.fromRGB(215, 215, 240) },
 }
 Art.ambienceTweenSeconds = 2
+
+-- Detalle de los modelos de los bichos (server/CritterArt): 2 = completo; 1 = sin los adornos
+-- pequeños (cada bicho tiene entonces en torno a un tercio menos de piezas). Bájalo a 1 si el juego
+-- va lento en móviles modestos.
+Art.critterDetail = 2
 
 -- Animaciones de los bichos (client/CritterAnimator).
 Art.animation = {
@@ -55,7 +65,22 @@ Art.animation = {
 	wingDegrees = 25,
 	wagDegrees = 15,
 	dropSpeed = 0.8,
-	flying = { tostada_voladora = true, nube_grunona = true }, -- se balancean más
+	-- Los que flotan o vuelan se balancean más.
+	flying = {
+		gaviota_pirata = true,
+		murcielago_magma = true,
+		dragon_algodon = true,
+		sombra_pendulo = true,
+		caballero_eclipse = true,
+	} :: { [string]: boolean },
+	-- Los que ruedan al moverse: eje sobre el que giran ("Z" = voltereta lateral, "X" = rueda hacia delante).
+	rolling = { estrella_ninja = "Z", erizo_tambor = "X" } :: { [string]: string },
+	spinSpeed = 2.5, -- piezas "Giro" (hélices, engranajes, llaves de cuerda): vueltas por segundo aprox.
+	pulseSpeed = 1.2, -- piezas "Brillo" (grietas de lava, núcleos): latido de la luz
+	pulseDepth = 0.45, -- cuánto se apagan en cada latido (0 = nada)
+	hueSeconds = 1, -- piezas "Arcoiris": cada cuánto cambian de color
+	headTurnSeconds = 6, -- piezas "Cabeza": una vuelta completa cada este tiempo
+	swingDegrees = 22, -- piezas "Pendulo"
 }
 
 -- Terreno del campo (WorldArt).
@@ -88,6 +113,11 @@ Art.themeColors = {
 	BosqueRuidoso = Color3.fromRGB(70, 170, 80),
 	VolcanTimido = Color3.fromRGB(230, 90, 50),
 	NubePegajosa = Color3.fromRGB(190, 160, 255),
+	PantanoCristal = Color3.fromRGB(60, 200, 190),
+	RelojeriaAbandonada = Color3.fromRGB(200, 150, 70),
+	ValleTitanes = Color3.fromRGB(120, 150, 120),
+	ObservatorioAstral = Color3.fromRGB(80, 90, 220),
+	SantuarioEclipse = Color3.fromRGB(70, 60, 100),
 }
 
 -- Plaza de los santuarios.
@@ -108,13 +138,25 @@ Art.vaultDecor = {
 	clouds = 4,
 	crystals = 3,
 	rocks = 4,
+	ponds = 4, -- Pantano de Cristal
+	reeds = 6,
+	gears = 5, -- Relojería Abandonada
+	pendulums = 2,
+	titanPieces = 3, -- Valle de los Titanes
+	pillars = 5,
+	starOrbs = 8, -- Observatorio Astral
+	obelisks = 6, -- Santuario del Eclipse
 }
 
--- Noche (el cliente tiñe la pantalla; el servidor oscurece el cielo).
-Art.night = {
-	tint = Color3.fromRGB(150, 170, 255),
-	brightness = 0.6,
-	ambient = Color3.fromRGB(60, 70, 110),
+-- Eventos de mutación: cuánto se tiñe la pantalla con el color del evento (0-1) y las partículas
+-- que caen del cielo alrededor del jugador (solo en su pantalla).
+Art.mutationEvent = {
+	tintStrength = 0.75,
+	skyHeight = 28, -- altura sobre el jugador desde la que caen
+	skySize = 70, -- lado del cuadrado de cielo del que caen
+	rate = 45, -- partículas por segundo
+	fallSpeed = 14,
+	lifetime = 2.2,
 }
 
 -- Material del suelo de cada zona (Terrain).
@@ -123,6 +165,11 @@ Art.zoneMaterials = {
 	BosqueRuidoso = Enum.Material.LeafyGrass,
 	VolcanTimido = Enum.Material.Basalt,
 	NubePegajosa = Enum.Material.Snow,
+	PantanoCristal = Enum.Material.Mud,
+	RelojeriaAbandonada = Enum.Material.Brick,
+	ValleTitanes = Enum.Material.Limestone,
+	ObservatorioAstral = Enum.Material.Slate,
+	SantuarioEclipse = Enum.Material.Asphalt,
 }
 
 return Art

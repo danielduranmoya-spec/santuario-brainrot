@@ -69,42 +69,82 @@ end
 
 -- Cuánto multiplica la producción de los bichos atrapados en la bóveda n.
 function VaultMath.valueMultiplier(n: number): number
-	if n <= #NAMED then
+	if n < ENDLESS.valueFromVault then
 		return 1
 	end
-	return math.floor(ENDLESS.valueGrowth ^ (n - #NAMED) + 0.5)
+	return math.floor(ENDLESS.valueGrowth ^ (n - ENDLESS.valueFromVault + 1) + 0.5)
 end
 
-function VaultMath.luck(n: number): number
-	if n <= #NAMED then
-		return 1
-	end
-	return 1 + ENDLESS.luckPerVault * (n - #NAMED)
+-- Porcentaje de cada rareza en la bóveda n (Config/Critters.VaultChances).
+function VaultMath.rarityChances(n: number): { [string]: number }
+	local rows = CrittersConfig.VaultChances
+	return rows[math.clamp(n, 1, #rows)]
 end
 
--- Bichos que pueden aparecer: los de su temática en las 4 primeras; todos a partir de la 5ª.
+-- Bichos que pueden aparecer en la bóveda n: los suyos y los de todas las anteriores.
 function VaultMath.critterPool(n: number): { CrittersConfig.Critter }
 	local pool = {}
-	local theme = VaultMath.theme(n)
 	for _, def in CrittersConfig.List do
-		if n > #NAMED or def.zone == theme then
+		if not def.eventOnly and def.vault <= n then -- los de evento solo salen durante su evento
 			table.insert(pool, def)
 		end
 	end
 	return pool
 end
 
--- Texto de un bicho guardado: "id" o "id*multiplicador".
-function VaultMath.encodeCritter(id: string, multiplier: number): string
-	return if multiplier > 1 then id .. "*" .. multiplier else id
+export type CritterChance = { def: CrittersConfig.Critter, chance: number }
+
+-- Reparto exacto por bicho en la bóveda n, en tanto por ciento (suma 100): el porcentaje de cada
+-- rareza se divide a partes iguales entre sus bichos. Con `luck` > 1 (Suerte x2), todas las rarezas
+-- menos la más común de esa bóveda pesan `luck` veces más.
+function VaultMath.critterChances(n: number, luck: number?): { CritterChance }
+	local chances = VaultMath.rarityChances(n)
+	local byRarity: { [string]: { CrittersConfig.Critter } } = {}
+	for _, def in VaultMath.critterPool(n) do
+		local list = byRarity[def.rarity]
+		if not list then
+			list = {}
+			byRarity[def.rarity] = list
+		end
+		table.insert(list, def)
+	end
+	local result: { CritterChance } = {}
+	local total = 0
+	local lowestSeen = false
+	for _, rarity in CrittersConfig.RarityOrder do
+		local list = byRarity[rarity]
+		local weight = chances[rarity] or 0
+		if list and weight > 0 then
+			if lowestSeen then
+				weight *= luck or 1
+			end
+			lowestSeen = true
+			for _, def in list do
+				table.insert(result, { def = def, chance = weight / #list })
+				total += weight / #list
+			end
+		end
+	end
+	if total > 0 then
+		for _, item in result do
+			item.chance = item.chance / total * 100
+		end
+	end
+	return result
 end
 
-function VaultMath.decodeCritter(entry: string): (string, number)
-	local id, multiplier = string.match(entry, "^([%w_]+)%*(%d+)$")
-	if id and multiplier then
-		return id, tonumber(multiplier) or 1
+-- Elige un bicho de la bóveda n con ese reparto. `roll` es un número al azar entre 0 y 1.
+function VaultMath.pickCritter(n: number, luck: number, roll: number): CrittersConfig.Critter?
+	local list = VaultMath.critterChances(n, luck)
+	local left = roll * 100
+	for _, item in list do
+		left -= item.chance
+		if left <= 0 then
+			return item.def
+		end
 	end
-	return entry, 1
+	local last = list[#list]
+	return if last then last.def else nil
 end
 
 return VaultMath

@@ -18,8 +18,9 @@ Gameplay.Field = {
 	hubLength = 200, -- largo de la plaza de santuarios (de startZ a startZ + hubLength)
 	spawn = Vector3.new(0, 0, 60), -- punto de aparición (en la plaza, entre los santuarios)
 	vaultLength = 100, -- largo de cada bóveda
-	initialVaults = 6, -- bóvedas construidas al arrancar el servidor
-	aheadVaults = 3, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
+	-- Menos bóvedas construidas de antemano = menos piezas (va más fluido en móvil). Antes 6 y 3.
+	initialVaults = 4, -- bóvedas construidas al arrancar el servidor
+	aheadVaults = 2, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
 	crittersPerVault = 6, -- bichos salvajes a la vez en cada bóveda
 	edgeMargin = 10, -- los bichos no aparecen pegados a muros ni puertas
 }
@@ -46,7 +47,7 @@ Gameplay.Spawning = {
 }
 
 -- Suerte x2 (producto de pago): mientras dure, aparece cerca del jugador un bicho reservado
--- para él, con las rarezas no comunes multiplicadas.
+-- para él, con todas las rarezas menos la más común de esa bóveda multiplicadas.
 Gameplay.Luck = {
 	personalSpawnSeconds = 20,
 	rarityMultiplier = 2,
@@ -81,6 +82,11 @@ Gameplay.Sanctuary = {
 	collectCheckSeconds = 0.2,
 	coinTickSeconds = 1,
 	labelMaxDistance = 120,
+	-- Si el santuario está lleno y traes un bicho que genera más que el más flojo, lo sustituye y el
+	-- flojo se vende por sellValueSeconds segundos de lo que generaba. Así siempre merece la pena
+	-- atrapar bichos mejores, aunque no tengas huecos libres.
+	autoReplaceWeakest = true,
+	sellValueSeconds = 30,
 }
 
 Gameplay.Data = {
@@ -98,7 +104,9 @@ Gameplay.Data = {
 Gameplay.Menus = {
 	upgradesAfterCritters = 1, -- el botón MEJORAS sale al tener este número de bichos en el santuario
 	shopAfterSeconds = 60, -- GDD: nada de tiendas antes del primer minuto
+	codesAfterSeconds = 60, -- el botón CÓDIGOS, también tras el primer minuto
 	actionCooldownSeconds = 0.3,
+	codeCooldownSeconds = 2, -- entre intentos de canjear un código
 }
 
 -- Brillo de cada rareza: alcance de la luz (0 = sin luz) y chispas por segundo (0 = sin chispas).
@@ -108,6 +116,8 @@ Gameplay.RarityGlow = {
 	Raro = { light = 8, brightness = 3, sparkles = 1 },
 	Epico = { light = 10, brightness = 3, sparkles = 4 },
 	Legendario = { light = 14, brightness = 2, sparkles = 8 },
+	Mitico = { light = 16, brightness = 2.5, sparkles = 12 },
+	Secreto = { light = 18, brightness = 3, sparkles = 16 },
 }
 
 -- Los bichos se elevan un poco para quedar por encima del suelo de color de cada zona.
@@ -122,6 +132,8 @@ Gameplay.CatchBurst = {
 	Raro = { particles = 28, confetti = 40, flash = true, column = true },
 	Epico = { particles = 40, confetti = 55, flash = true, column = true },
 	Legendario = { particles = 60, confetti = 80, flash = true, column = true },
+	Mitico = { particles = 70, confetti = 90, flash = true, column = true },
+	Secreto = { particles = 80, confetti = 100, flash = true, column = true },
 }
 
 -- Tamaño (studs) de cada rareza: cuanto más raro, más grande.
@@ -131,17 +143,21 @@ Gameplay.CritterSizes = {
 	Raro = 4.8,
 	Epico = 6,
 	Legendario = 7.5,
+	Mitico = 8, -- no más de slotSpacing (8,5): si no, se pisan en los pedestales
+	Secreto = 8.5,
 }
 
 -- Movimiento de cada rareza: multiplica la velocidad y la distancia de paseo (Spawning).
--- Cuanto más raro, más rápido y más lejos corretea. Al empezar la barra el bicho se para, y de
--- noche todos están quietos, así que la captura sigue siendo justa.
+-- Cuanto más raro, más rápido y más lejos corretea. Al empezar la barra el bicho se para,
+-- así que la captura sigue siendo justa.
 Gameplay.RarityMotion = {
 	Comun = { speed = 1, distance = 1 },
 	PocoComun = { speed = 1.3, distance = 1.2 },
 	Raro = { speed = 1.7, distance = 1.4 },
 	Epico = { speed = 2.2, distance = 1.7 },
 	Legendario = { speed = 2.8, distance = 2 },
+	Mitico = { speed = 3.4, distance = 2.3 },
+	Secreto = { speed = 4, distance = 2.6 },
 }
 
 return Gameplay

@@ -4,7 +4,10 @@
 -- muros bajos con farolillos, arco de entrada con el nombre del dueño, pedestales para los bichos
 -- (los que aún no tienes se ven apagados: se abren con la mejora Santuario) y una plataforma dorada
 -- con cofre donde se acumulan las monedas; el dueño las cobra al pisarla (el Imán amplía la distancia).
--- Los bichos se guardan en el perfil como "id" o "id*multiplicador" (bóvedas lejanas valen más).
+-- Los bichos se guardan en el perfil como "id", "id*multiplicador" (bóvedas lejanas valen más) y,
+-- si tienen mutación, con ":Color:Tamaño" al final (Shared/MutationMath).
+-- Si el santuario está lleno y traes un bicho mejor que el más flojo, lo sustituye (y el flojo se
+-- vende). Con valla activa (Services/Bait), un muro de luz rodea la parcela.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,14 +22,23 @@ local Shop = require(Config:WaitForChild("Shop"))
 local Art = require(Config:WaitForChild("Art"))
 local Format = require(Shared:WaitForChild("Format"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
-local VaultMath = require(Shared:WaitForChild("VaultMath"))
+local MutationMath = require(Shared:WaitForChild("MutationMath"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local CritterVisual = require(script.Parent:WaitForChild("CritterVisual"))
+local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 type CritterDef = CrittersConfig.Critter
+
+-- Lo que otros servicios pueden saber de una parcela.
+export type PlotInfo = {
+	index: number,
+	model: Model,
+	origin: CFrame, -- centro a ras de suelo; -Z mira hacia la avenida (la entrada)
+	owner: Player?,
+}
 
 type Plot = {
 	index: number,
@@ -41,6 +53,7 @@ type Plot = {
 	parts: { BasePart }, -- bichos dibujados en los pedestales
 	pending: number,
 	slotCount: number,
+	fence: Model?,
 }
 
 local S = Gameplay.Sanctuary
@@ -242,6 +255,7 @@ local function buildPlot(index: number): Plot
 		parts = {},
 		pending = 0,
 		slotCount = Progression.StartingSlots,
+		fence = nil,
 	}
 	setOwnerText(plot, "Santuario libre")
 	updatePendingLabel(plot)
@@ -267,11 +281,20 @@ local function slotCountFor(player: Player): number
 	return UpgradeMath.slotCount(level, isVip(player))
 end
 
--- Monedas por segundo de un bicho guardado ("id" o "id*multiplicador").
-local function entryIncome(entry: string): (CritterDef?, number, number)
-	local id, multiplier = VaultMath.decodeCritter(entry)
+-- Monedas por segundo de un bicho: base x bóveda x color x tamaño.
+local function incomeOf(def: CritterDef, multiplier: number, color: string?, size: string?): number
+	return def.coinsPerSecond * multiplier * MutationMath.multiplier(color, size)
+end
+
+-- Bicho guardado: su definición, multiplicador de bóveda, monedas por segundo, color y tamaño.
+local function entryIncome(entry: string): (CritterDef?, number, number, string, string)
+	local id, multiplier, color, size = MutationMath.decode(entry)
 	local def = defsById[id]
-	return def, multiplier, if def then def.coinsPerSecond * multiplier else 0
+	return def, multiplier, if def then incomeOf(def, multiplier, color, size) else 0, color, size
+end
+
+local function fullName(def: CritterDef, multiplier: number, color: string?, size: string?): string
+	return MutationMath.displayName(def.name, color, size) .. (if multiplier > 1 then " x" .. multiplier else "")
 end
 
 -- Vuelve a dibujar los pedestales y los bichos del santuario a partir del perfil.
@@ -294,12 +317,12 @@ local function render(plot: Plot)
 	local waiting = 0
 	if profile then
 		for i, entry in profile.critters do
-			local def, multiplier, income = entryIncome(entry)
+			local def, multiplier, income, color, size = entryIncome(entry)
 			if i > plot.slotCount then
 				waiting += 1
 			elseif def then
 				local pad = plot.slotPads[i]
-				local part = CritterVisual.create(def)
+				local part = CritterVisual.create(def, color, size, true)
 				part.CFrame = plot.origin * slotOffset(i) * CFrame.new(0, 1.45 + part.Size.Y / 2, 0)
 				CritterVisual.setDetail(part, (if multiplier > 1 then "x" .. multiplier .. " · " else "") .. "+" .. Format.number(income) .. "/s")
 				part.Parent = plot.model
@@ -311,6 +334,8 @@ local function render(plot: Plot)
 	plot.waitingLabel.Text = if waiting > 0 then "+" .. waiting .. " bichos esperando pedestal (mejora el Santuario)" else ""
 	if owner then
 		owner:SetAttribute("CritterCount", if profile then #profile.critters else 0)
+		-- Lista de bichos para el menú de las máquinas de fusión (solo lectura en el cliente).
+		owner:SetAttribute("CritterList", if profile then table.concat(profile.critters, ",") else "")
 		owner:SetAttribute("IncomePerSecond", Plots.GetIncomePerSecond(owner))
 	end
 end
@@ -331,12 +356,37 @@ local function assign(player: Player)
 	Remotes.Notify:FireClient(player, "No quedan santuarios libres en este servidor.")
 end
 
+-- Valla: muro de luz alrededor de la parcela (solo se ve; la protección la decide Services/Bait).
+local function setFence(plot: Plot, active: boolean)
+	if not active then
+		if plot.fence then
+			plot.fence:Destroy()
+			plot.fence = nil
+		end
+		return
+	end
+	if plot.fence then
+		return
+	end
+	local fence = Instance.new("Model")
+	fence.Name = "Valla"
+	local size = S.plotSize + 3
+	local height = 5
+	for _, sideCF in { CFrame.new(0, 0, -size / 2), CFrame.new(0, 0, size / 2), CFrame.new(-size / 2, 0, 0) * CFrame.Angles(0, math.rad(90), 0), CFrame.new(size / 2, 0, 0) * CFrame.Angles(0, math.rad(90), 0) } do
+		local wall = small(newPart("MuroLuz", Vector3.new(size, height, 0.3), plot.origin * sideCF * CFrame.new(0, FLOOR_TOP + height / 2, 0), Color3.fromRGB(120, 220, 255), fence, Enum.Material.ForceField))
+		wall.Transparency = 0.2
+	end
+	fence.Parent = plot.model
+	plot.fence = fence
+end
+
 -- Al salir: lo que quedaba en el cofre se suma a sus monedas antes del último guardado.
 local function release(player: Player)
 	local plot = byPlayer[player]
 	if not plot then
 		return
 	end
+	setFence(plot, false)
 	if plot.pending >= 1 then
 		Economy.AddCoins(player, math.floor(plot.pending))
 	end
@@ -360,33 +410,124 @@ function Plots.IsInOwnPlot(player: Player, position: Vector3): boolean
 	return math.abs(localPosition.X) <= half and math.abs(localPosition.Z) <= half
 end
 
--- Coloca un bicho capturado en el primer pedestal libre. Devuelve si se pudo y el mensaje.
-function Plots.AddCritter(player: Player, def: CritterDef, multiplier: number?): (boolean, string)
+-- Hueco (de los que tienen pedestal) con el bicho que menos genera, y lo que genera.
+local function weakestSlot(plot: Plot, profile: Data.Profile): (number?, number)
+	local weakestIndex: number? = nil
+	local weakestIncome = math.huge
+	for i, entry in profile.critters do
+		if i > plot.slotCount then
+			break
+		end
+		local _, _, income = entryIncome(entry)
+		if income < weakestIncome then
+			weakestIndex = i
+			weakestIncome = income
+		end
+	end
+	return weakestIndex, weakestIncome
+end
+
+-- Coloca un bicho capturado en el primer pedestal libre. Si no hay hueco y es mejor que el más
+-- flojo, lo sustituye y vende el flojo (Config/Gameplay.Sanctuary). Devuelve si se pudo y el mensaje.
+function Plots.AddCritter(player: Player, def: CritterDef, multiplier: number?, color: string?, size: string?): (boolean, string)
 	local plot = byPlayer[player]
 	local profile = Data.Get(player)
 	if not plot or not profile then
 		return false, "No tienes santuario en este servidor."
 	end
-	if #profile.critters >= plot.slotCount then
-		return false, "¡Tu santuario está lleno! Mejóralo en MEJORAS o pulsa SOLTAR."
-	end
 	local mult = multiplier or 1
-	table.insert(profile.critters, VaultMath.encodeCritter(def.id, mult))
+	local income = incomeOf(def, mult, color, size)
+	local entry = MutationMath.encode(def.id, mult, color, size)
+	local slot: number
+	local soldText = ""
+	if #profile.critters < plot.slotCount then
+		table.insert(profile.critters, entry)
+		slot = #profile.critters
+	else
+		local weakest, weakestIncome = weakestSlot(plot, profile)
+		if not S.autoReplaceWeakest or not weakest or weakestIncome >= income then
+			return false, "¡Tu santuario está lleno y este bicho no mejora a ninguno! Pulsa SOLTAR o mejora el Santuario."
+		end
+		local oldDef, oldMultiplier, _, oldColor, oldSize = entryIncome(profile.critters[weakest])
+		local price = math.floor(weakestIncome * S.sellValueSeconds)
+		profile.critters[weakest] = entry
+		slot = weakest
+		Economy.AddCoins(player, price)
+		soldText = " Sustituye a " .. (if oldDef then fullName(oldDef, oldMultiplier, oldColor, oldSize) else "un bicho") .. ", que se vende por " .. Format.number(price) .. " 💰."
+	end
 	render(plot)
-	local pad = plot.slotPads[#profile.critters]
+	local pad = plot.slotPads[slot]
 	if pad then
 		Remotes.Effect:FireClient(player, "deposito", pad.Position + Vector3.new(0, 2, 0), def.rarity)
 	end
-	return true, "¡" .. def.name .. (if mult > 1 then " x" .. mult else "") .. " ya genera +" .. Format.number(def.coinsPerSecond * mult) .. " monedas/s!"
+	Analytics.Step(player, "primer_bicho")
+	return true, "¡" .. fullName(def, mult, color, size) .. " ya genera +" .. Format.number(income) .. " monedas/s!" .. soldText
+end
+
+-- Quita un bicho al azar (de los que tienen pedestal) que cumpla `allowed`. Lo usa el cebo.
+-- Devuelve el bicho, su multiplicador, color y tamaño, o nil si no hay ninguno que se pueda llevar.
+function Plots.TakeRandomCritter(player: Player, allowed: (CritterDef) -> boolean): (CritterDef?, number, string, string)
+	local plot = byPlayer[player]
+	local profile = Data.Get(player)
+	if not plot or not profile then
+		return nil, 1, "Normal", "Normal"
+	end
+	local candidates = {}
+	for i, entry in profile.critters do
+		local def = entryIncome(entry)
+		if i <= plot.slotCount and def and allowed(def) then
+			table.insert(candidates, i)
+		end
+	end
+	if #candidates == 0 then
+		return nil, 1, "Normal", "Normal"
+	end
+	local index = candidates[math.random(1, #candidates)]
+	local def, multiplier, _, color, size = entryIncome(profile.critters[index])
+	table.remove(profile.critters, index)
+	render(plot)
+	return def, multiplier, color, size
+end
+
+-- Cuántos bichos de los que tienen pedestal cumplen `allowed`.
+function Plots.CountCritters(player: Player, allowed: (CritterDef) -> boolean): number
+	local plot = byPlayer[player]
+	local profile = Data.Get(player)
+	local count = 0
+	if plot and profile then
+		for i, entry in profile.critters do
+			local def = entryIncome(entry)
+			if i <= plot.slotCount and def and allowed(def) then
+				count += 1
+			end
+		end
+	end
+	return count
+end
+
+-- Enciende o apaga el muro de luz de la valla del jugador.
+function Plots.SetFence(player: Player, active: boolean)
+	local plot = byPlayer[player]
+	if plot then
+		setFence(plot, active)
+	end
+end
+
+function Plots.GetPlots(): { PlotInfo }
+	return plots :: any
+end
+
+function Plots.GetPlotInfo(player: Player): PlotInfo?
+	return byPlayer[player] :: any
 end
 
 -- Da un bicho (premio o compra) aunque no haya hueco: si no cabe, espera a que mejores el santuario.
-function Plots.GrantCritter(player: Player, def: CritterDef, multiplier: number?)
+function Plots.GrantCritter(player: Player, def: CritterDef, multiplier: number?, color: string?, size: string?)
 	local profile = Data.Get(player)
 	if not profile then
 		return
 	end
-	table.insert(profile.critters, VaultMath.encodeCritter(def.id, multiplier or 1))
+	table.insert(profile.critters, MutationMath.encode(def.id, multiplier or 1, color, size))
 	local plot = byPlayer[player]
 	if plot then
 		render(plot)
@@ -400,15 +541,6 @@ function Plots.GetSafeCFrame(player: Player): CFrame?
 		return nil
 	end
 	return plot.origin * CFrame.new(0, 4, -S.plotSize / 2 - 4)
-end
-
--- Punto dentro del santuario, junto al cofre, mirando hacia dentro (para volver a casa de noche).
-function Plots.GetHomeCFrame(player: Player): CFrame?
-	local plot = byPlayer[player]
-	if not plot then
-		return nil
-	end
-	return plot.origin * CFrame.new(0, 5, -S.plotSize / 2 + 15) * CFrame.Angles(0, math.pi, 0)
 end
 
 -- Redibuja el santuario (tras mejorar el Santuario o comprar VIP).
@@ -433,6 +565,10 @@ function Plots.GetIncomePerSecond(player: Player): number
 	end
 	if player:GetAttribute("Pass_DobleMonedas") == true then
 		total *= Shop.Perks.doubleCoinsMultiplier
+	end
+	-- Ventaja pequeña para los suscriptores de Roblox (Config/Shop.Premium).
+	if player.MembershipType == Enum.MembershipType.Premium then
+		total *= 1 + Shop.Premium.incomeBonus
 	end
 	return total
 end
@@ -471,6 +607,7 @@ local function collectLoop()
 					Economy.AddCoins(owner, amount)
 					updatePendingLabel(plot)
 					Remotes.Effect:FireClient(owner, "monedas", plot.collectPad.Position, amount)
+					Analytics.Step(owner, "primer_cobro")
 				end
 			end
 		end
@@ -505,6 +642,10 @@ function Plots.Start()
 	end)
 	Data.OnRelease(function(player)
 		release(player)
+	end)
+	-- Si alguien se suscribe a Roblox Premium mientras juega, se le aplica la ventaja ya.
+	Players.PlayerMembershipChanged:Connect(function(player)
+		Plots.Refresh(player)
 	end)
 	task.spawn(coinLoop)
 	task.spawn(collectLoop)

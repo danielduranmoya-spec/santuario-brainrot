@@ -17,7 +17,6 @@ local Audio = require(Config:WaitForChild("Audio"))
 local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Art = require(Config:WaitForChild("Art"))
-local Events = require(Config:WaitForChild("Events"))
 local Format = require(Shared:WaitForChild("Format"))
 
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
@@ -312,31 +311,10 @@ function Effects.Start()
 		sounds[name] = makeSound(name, sound.id, sound.volume, soundFolder)
 	end
 
-	-- Música clásica: una pieza de día y otra de noche, con fundido al cambiar.
-	local dayMusic = makeSound("MusicaDia", Audio.Music.dia.id, 0, soundFolder)
-	local nightMusic = makeSound("MusicaNoche", Audio.Music.noche.id, 0, soundFolder)
-	dayMusic.Looped = true
-	nightMusic.Looped = true
-	local fade = TweenInfo.new(Events.DayNight.musicFadeSeconds)
-	local function updateMusic()
-		local night = ReplicatedStorage:GetAttribute("IsNight") == true
-		local playing = if night then nightMusic else dayMusic
-		local stopping = if night then dayMusic else nightMusic
-		if not playing.IsPlaying then
-			playing.TimePosition = 0
-			playing:Play()
-		end
-		TweenService:Create(playing, fade, { Volume = if night then Audio.Music.noche.volume else Audio.Music.dia.volume }):Play()
-		local out = TweenService:Create(stopping, fade, { Volume = 0 })
-		out.Completed:Connect(function()
-			if stopping.Volume <= 0.001 then
-				stopping:Pause()
-			end
-		end)
-		out:Play()
-	end
-	ReplicatedStorage:GetAttributeChangedSignal("IsNight"):Connect(updateMusic)
-	updateMusic()
+	-- Música clásica de fondo, en bucle.
+	local music = makeSound("Musica", Audio.Music.fondo.id, Audio.Music.fondo.volume, soundFolder)
+	music.Looped = true
+	music:Play()
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "EfectosUI"

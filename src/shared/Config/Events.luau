@@ -3,34 +3,40 @@
 
 local Events = {}
 
+-- Bicho legendario de servidor: cada 8 minutos aparece uno para todos en la bóveda 1 (la que
+-- todos tienen abierta), con aviso de 15 s. El primero en atraparlo se lo queda y sale en el chat.
 Events.ServerLegendary = {
 	intervalSeconds = 8 * 60,
 	warningSeconds = 15,
+	critterId = "lobo_tormenta",
+	lifetimeSeconds = 90, -- si nadie lo atrapa en este tiempo, se va volando
+	firstDelaySeconds = 4 * 60, -- el primero del servidor sale antes, para que los nuevos lo vean pronto
 }
 
+-- Lluvia de Bichos: sábados 18:00 (Madrid en invierno), 30 min. Aparecen bichos x3 y, de vez en
+-- cuando, el bicho exclusivo de la semana (en Config/Critters, con eventOnly = true).
+-- En verano (UTC+2) cambia hourUTC a 16 para que siga siendo a las 18:00 en Madrid.
 Events.LluviaDeBichos = {
 	weekday = 7, -- sábado (os.date: 1 = domingo)
 	hourUTC = 17, -- 18:00 en Madrid en invierno
 	durationMinutes = 30,
 	spawnMultiplier = 3,
+	exclusiveCritterId = "ajolote_chubasquero",
+	exclusiveChance = 0.12, -- probabilidad de que cada bicho que aparece sea el exclusivo
 }
 
+-- Robo amable: pones un cebo en la entrada del santuario de otro jugador. Si en durationSeconds el
+-- dueño no lo espanta (tocándolo) ni compra una valla, uno de sus bichos (nunca legendario) se va
+-- contigo. Nadie pierde más de un bicho cada cooldownPerVictimSeconds.
 Events.Bait = {
 	durationSeconds = 20,
 	cooldownPerVictimSeconds = 10 * 60,
 	fenceDurationSeconds = 10 * 60,
 	fenceCost = 1_000,
-}
-
--- Ciclo de día y noche: de noche los bichos duermen y no se puede atrapar nada.
-Events.DayNight = {
-	daySeconds = 5 * 60,
-	nightSeconds = 30,
-	transitionSeconds = 4, -- lo que tarda la luz en cambiar
-	dayClockTime = 14.5, -- hora que marca el cielo de día (0-24)
-	nightClockTime = 22.5, -- de noche (se usa 22,5 y no 0 para que la luz cambie sin dar la vuelta al reloj)
-	warningSeconds = 10, -- aviso (sonido y mensaje) antes de que anochezca
-	musicFadeSeconds = 3, -- fundido entre la música de día y la de noche
+	minVictimCritters = 3, -- no se puede poner cebo a quien tiene menos bichos (protege a los nuevos)
+	promptHoldSeconds = 1,
+	promptDistance = 10,
+	neverSteal = { Legendario = true, Mitico = true, Secreto = true }, -- rarezas que nunca se escapan
 }
 
 Events.DailyRewardStreakDays = 7
