@@ -662,6 +662,29 @@ LiveHud.Start(gui, function(text: string, color: Color3?)
 	showToast(text, color)
 end)
 
+-- Franja de arriba: barra de la siguiente bóveda, debajo la pista (y el aviso de mutación rara en su
+-- sitio) y debajo el aviso. Se colocan en píxeles una debajo de otra, así no se pisan aunque los
+-- tamaños mínimos para móvil las hagan más altas de lo que daría la escala.
+local rareBanner = gui:FindFirstChild("AvisoMutacionRara") :: GuiObject?
+local TOP_GAP = 6
+local function layoutTop()
+	local y = TOP_GAP
+	nextFrame.AnchorPoint = Vector2.new(0.5, 0)
+	nextFrame.Position = UDim2.new(0.5, 0, 0, y)
+	y += nextFrame.AbsoluteSize.Y + TOP_GAP
+	hintLabel.AnchorPoint = Vector2.new(0.5, 0)
+	hintLabel.Position = UDim2.new(0.5, 0, 0, y)
+	if rareBanner then
+		rareBanner.AnchorPoint = Vector2.new(0.5, 0)
+		rareBanner.Position = UDim2.new(0.5, 0, 0, y)
+	end
+	y += math.max(hintLabel.AbsoluteSize.Y, if rareBanner then rareBanner.AbsoluteSize.Y else 0) + TOP_GAP
+	toastLabel.AnchorPoint = Vector2.new(0.5, 0)
+	toastLabel.Position = UDim2.new(0.5, 0, 0, y)
+end
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutTop)
+task.defer(layoutTop)
+
 local function tryCatch()
 	if minigame and not waitingResult then
 		waitingResult = true

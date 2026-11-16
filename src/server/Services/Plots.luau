@@ -12,6 +12,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
@@ -655,6 +657,26 @@ function Plots.Start()
 	end)
 	task.spawn(coinLoop)
 	task.spawn(collectLoop)
+
+	-- Solo en Studio, para probar las máquinas de fusión sin atrapar uno a uno:
+	--   ServerStorage.DebugDarBichos:Invoke(player, "caracol_turbo", 5, "Oro", "Normal")
+	-- mete esos bichos directamente en el santuario (color y tamaño opcionales). No existe publicado.
+	if RunService:IsStudio() then
+		local debugGrant = Instance.new("BindableFunction")
+		debugGrant.Name = "DebugDarBichos"
+		debugGrant.OnInvoke = function(player: Player, critterId: string, count: number?, color: string?, size: string?)
+			local def = defsById[critterId]
+			if not def then
+				return false
+			end
+			for _ = 1, math.clamp(count or 1, 1, 50) do
+				Plots.GrantCritter(player, def, 1, color, size)
+			end
+			Data.Replicate(player)
+			return true
+		end
+		debugGrant.Parent = ServerStorage
+	end
 end
 
 return Plots
