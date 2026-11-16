@@ -231,14 +231,15 @@ nextPadding.PaddingTop = UDim.new(0.15, 0)
 nextPadding.PaddingBottom = UDim.new(0.15, 0)
 nextPadding.Parent = nextText
 
-local hintLabel = newLabel("Pista", UDim2.fromScale(0.7, 0.055), UDim2.fromScale(0.5, 0.12), gui)
+local hintLabel = newLabel("Pista", UDim2.fromScale(0.5, 0.055), UDim2.fromScale(0.5, 0.12), gui)
 hintLabel.Visible = false
-limitSize(hintLabel, Vector2.new(260, if IS_TOUCH then 34 else 28), Vector2.new(900, 60))
+-- Ancho máximo: que no llegue bajo la lista de jugadores ni los botones de Roblox de arriba.
+limitSize(hintLabel, Vector2.new(260, if IS_TOUCH then 34 else 28), Vector2.new(620, 60))
 
 local toastLabel = newLabel("Aviso", UDim2.fromScale(0.7, 0.08), UDim2.fromScale(0.5, 0.22), gui)
 toastLabel.TextWrapped = true
 toastLabel.Visible = false
-limitSize(toastLabel, Vector2.new(280, if IS_TOUCH then 46 else 36), Vector2.new(900, 90))
+limitSize(toastLabel, Vector2.new(280, if IS_TOUCH then 46 else 36), Vector2.new(680, 90))
 limitSize(nextFrame, Vector2.new(260, if IS_TOUCH then 26 else 22), Vector2.new(700, 44))
 
 -- Barra del minijuego
