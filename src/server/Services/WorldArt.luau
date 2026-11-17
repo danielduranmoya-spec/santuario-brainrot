@@ -917,6 +917,117 @@ local function buildCoastDetails(parent: Instance)
 	end
 end
 
+
+-- ===== Puntos de referencia de cada zona (se ven desde la plaza) =====
+
+local function clockTower(position: Vector3, parent: Instance)
+	local m = model("TorreReloj", parent)
+	local brick = Color3.fromRGB(170, 115, 85)
+	local trim = Color3.fromRGB(225, 200, 150)
+	local base = CFrame.lookAt(position, Vector3.new(0, position.Y, 0)) -- la esfera mira a la plaza
+	part("Base", nil, Vector3.new(16, 4, 16), base * CFrame.new(0, 2, 0), Color3.fromRGB(150, 140, 130), Enum.Material.Cobblestone, m)
+	part("Torre", nil, Vector3.new(12, 44, 12), base * CFrame.new(0, 26, 0), brick, Enum.Material.Brick, m)
+	for _, y in { 12, 26, 40 } do
+		deco("Cornisa", nil, Vector3.new(13.2, 1, 13.2), base * CFrame.new(0, y, 0), trim, Enum.Material.SmoothPlastic, m)
+	end
+	part("Campanario", nil, Vector3.new(13, 10, 13), base * CFrame.new(0, 53, 0), trim, Enum.Material.SmoothPlastic, m)
+	part("Tejado", nil, Vector3.new(14, 10, 14), base * CFrame.new(0, 62.5, 0) * CFrame.Angles(0, math.rad(45), 0), Color3.fromRGB(90, 70, 120), Enum.Material.Slate, m)
+	ellipsoid(deco("Punta", nil, Vector3.new(3, 8, 3), base * CFrame.new(0, 70, 0), Art.colors.gold, Enum.Material.Metal, m))
+	for _, side in { -1, 1 } do
+		local face = base * CFrame.Angles(0, if side == 1 then 0 else math.pi, 0) * CFrame.new(0, 53, -6.6)
+		deco("Esfera", Enum.PartType.Cylinder, Vector3.new(0.6, 9, 9), face * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(250, 245, 230), nil, m)
+		deco("Aro", Enum.PartType.Cylinder, Vector3.new(0.5, 9.8, 9.8), face * CFrame.new(0, 0, 0.1) * CFrame.Angles(0, math.rad(90), 0), Art.colors.gold, Enum.Material.Metal, m)
+		deco("Aguja", nil, Vector3.new(0.5, 3.6, 0.3), face * CFrame.new(0, 1.6, -0.4), Color3.fromRGB(30, 30, 35), nil, m)
+		deco("Aguja", nil, Vector3.new(2.6, 0.5, 0.3), face * CFrame.Angles(0, 0, math.rad(30)) * CFrame.new(1.1, 0, -0.4), Color3.fromRGB(30, 30, 35), nil, m)
+	end
+	local bell = deco("Campana", Enum.PartType.Ball, Vector3.one * 5, base * CFrame.new(0, 52, 0), Art.colors.gold, Enum.Material.Metal, m)
+	bell.CastShadow = false
+	-- Engranajes gigantes a los pies de la torre.
+	local rng = Random.new(Art.seed + 31)
+	for i = 1, 3 do
+		bigGear(rng, position + Vector3.new(math.cos(i * 2.1) * 13, 0, math.sin(i * 2.1) * 13), m)
+	end
+end
+
+local function titanSword(position: Vector3, parent: Instance)
+	local m = model("EspadaTitan", parent)
+	terrain:FillBall(position + Vector3.new(0, 2, 0), 14, Enum.Material.Rock)
+	terrain:FillBall(position + Vector3.new(0, 8, 0), 9, Enum.Material.LeafyGrass)
+	local cf = CFrame.new(position + Vector3.new(0, 14, 0)) * CFrame.Angles(math.rad(8), math.rad(30), math.rad(-6))
+	part("Hoja", nil, Vector3.new(7, 40, 1.6), cf * CFrame.new(0, 18, 0), Color3.fromRGB(190, 200, 210), Enum.Material.Metal, m)
+	part("Filo", nil, Vector3.new(7.4, 40, 0.6), cf * CFrame.new(0, 18, 0), Color3.fromRGB(230, 235, 245), Enum.Material.Metal, m)
+	part("Guarda", nil, Vector3.new(20, 3, 3.4), cf * CFrame.new(0, 39.5, 0), Color3.fromRGB(150, 120, 60), Enum.Material.Metal, m)
+	part("Puño", Enum.PartType.Cylinder, Vector3.new(11, 2.6, 2.6), cf * CFrame.new(0, 46.5, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(110, 70, 40), Enum.Material.Fabric, m)
+	part("Pomo", Enum.PartType.Ball, Vector3.one * 4.6, cf * CFrame.new(0, 53, 0), Color3.fromRGB(150, 120, 60), Enum.Material.Metal, m)
+	local gem = deco("Gema", Enum.PartType.Ball, Vector3.one * 2.4, cf * CFrame.new(0, 39.5, -1.6), Color3.fromRGB(80, 220, 160), Enum.Material.Neon, m)
+	local light = Instance.new("PointLight")
+	light.Range = 20
+	light.Color = Color3.fromRGB(80, 220, 160)
+	light.Parent = gem
+	-- Hiedra que trepa por la hoja.
+	for i = 1, 6 do
+		deco("Hiedra", Enum.PartType.Ball, Vector3.one * (3 - i * 0.3), cf * CFrame.new(math.sin(i * 1.7) * 2.6, 4 + i * 3.4, -1), Color3.fromRGB(70, 150, 70), Enum.Material.Grass, m)
+	end
+end
+
+local function lifeguardTower(position: Vector3, parent: Instance)
+	local m = model("Socorrista", parent)
+	local base = CFrame.lookAt(position, Vector3.new(position.X * 2, position.Y, position.Z * 2)) -- mira al mar
+	for _, x in { -2.5, 2.5 } do
+		for _, z in { -2.5, 2.5 } do
+			part("Pata", nil, Vector3.new(0.6, 9, 0.6), base * CFrame.new(x, 4.5, z) * CFrame.Angles(math.rad(z * 1.2), 0, math.rad(-x * 1.2)), Color3.fromRGB(250, 250, 250), Enum.Material.WoodPlanks, m)
+		end
+	end
+	part("Suelo", nil, Vector3.new(7, 0.6, 7), base * CFrame.new(0, 9, 0), WOOD, Enum.Material.WoodPlanks, m)
+	part("Caseta", nil, Vector3.new(6, 4.5, 6), base * CFrame.new(0, 11.5, 0.5), Color3.fromRGB(240, 70, 70), Enum.Material.SmoothPlastic, m)
+	part("Techo", nil, Vector3.new(7.4, 0.6, 7.4), base * CFrame.new(0, 14, 0.5), Color3.fromRGB(250, 250, 250), Enum.Material.SmoothPlastic, m)
+	deco("Ventana", nil, Vector3.new(4.2, 2, 0.2), base * CFrame.new(0, 12, -2.6), Color3.fromRGB(150, 210, 240), Enum.Material.Glass, m)
+	for i = 0, 5 do
+		part("Escalon", nil, Vector3.new(3, 0.4, 1.2), base * CFrame.new(0, 1 + i * 1.4, 4 + i * 0.9), WOOD, Enum.Material.WoodPlanks, m)
+	end
+	local ring = deco("Flotador", Enum.PartType.Cylinder, Vector3.new(0.8, 3, 3), base * CFrame.new(3.4, 7.5, 0) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(255, 120, 60), nil, m)
+	ring.CastShadow = false
+end
+
+local function boardwalk(rng: Random, n: number, parent: Instance)
+	local m = model("Pasarela", parent)
+	local start = sectorPoint(rng, n, ZN.ringRadius + 18, ZN.ringRadius + 30, true)
+	local heading = rng:NextNumber(0, math.pi * 2)
+	local p = start
+	for i = 1, 14 do
+		heading += rng:NextNumber(-0.35, 0.35)
+		local nextP = p + Vector3.new(math.cos(heading), 0, math.sin(heading)) * 4.2
+		if Layout.flatDistance(nextP) > COAST.radius - 30 or Layout.flatDistance(nextP) < HUB.wallRadius + 20 then
+			heading += math.pi * 0.5
+			nextP = p + Vector3.new(math.cos(heading), 0, math.sin(heading)) * 4.2
+		end
+		part("Tabla", nil, Vector3.new(5, 0.5, 4.4), CFrame.lookAt(p + Vector3.new(0, 1.4, 0), nextP + Vector3.new(0, 1.4, 0)), if i % 2 == 0 then WOOD else WOOD_DARK, Enum.Material.WoodPlanks, m)
+		if i % 3 == 0 then
+			for _, side in { -1, 1 } do
+				local off = (nextP - p).Unit:Cross(Vector3.yAxis) * side * 2.7
+				deco("Poste", Enum.PartType.Cylinder, Vector3.new(4, 0.6, 0.6), CFrame.new(p + off + Vector3.new(0, 1, 0)) * CFrame.Angles(0, 0, math.rad(90)), WOOD_DARK, Enum.Material.Wood, m)
+				local lantern = deco("Farolillo", Enum.PartType.Ball, Vector3.one * 0.9, CFrame.new(p + off + Vector3.new(0, 3.3, 0)), Color3.fromRGB(120, 255, 230), Enum.Material.Neon, m)
+				lantern.CastShadow = false
+			end
+		end
+		terrainDisc(p, 5, 4, G - 0.4, Enum.Material.Water)
+		p = nextP
+	end
+end
+
+-- Nubes grandes alrededor de la isla (decorado del cielo).
+local function skyClouds(parent: Instance)
+	local rng = Random.new(Art.seed + 77)
+	local m = model("NubesCielo", parent)
+	for i = 1, D.skyClouds do
+		local angle = i / D.skyClouds * 360 + rng:NextNumber(-10, 10)
+		local p = ringPos(angle, rng:NextNumber(COAST.radius * 0.6, COAST.radius * 1.5), G + rng:NextNumber(110, 170))
+		for k = 1, 3 do
+			cloudPuff(rng, p + Vector3.new(rng:NextNumber(-14, 14), rng:NextNumber(-3, 3), rng:NextNumber(-14, 14)), rng:NextNumber(10, 16) * (1 - k * 0.15), m)
+		end
+	end
+end
+
 -- ===== Decorado de cada zona =====
 
 -- Radio de la isla flotante de la zona n (cubre todo su rectángulo).
@@ -995,6 +1106,9 @@ local function decorateTheme(rng: Random, n: number, parent: Instance)
 			local p = where(true)
 			terrainDisc(p, rng:NextNumber(5, 8), 4, p.Y - 0.5, Enum.Material.Water)
 		end
+		if not floating then
+			lifeguardTower(ringPos(sectorCenterAngle(n) - 10, coastAt(sectorCenterAngle(n) - 10) - 22), parent)
+		end
 	elseif theme == "BosqueRuidoso" then
 		for i = 1, count(D.forestTrees) do
 			if i % 3 == 0 then
@@ -1047,6 +1161,9 @@ local function decorateTheme(rng: Random, n: number, parent: Instance)
 		end
 		rainbow(VaultMath.frame(n).Position + Vector3.new(0, 4, 0), parent)
 	elseif theme == "PantanoCristal" then
+		if not floating then
+			boardwalk(rng, n, parent)
+		end
 		for _ = 1, count(D.swampPools) do
 			local p = where()
 			terrainDisc(p, rng:NextNumber(7, 12), 4, p.Y - 0.4, Enum.Material.Water)
@@ -1062,6 +1179,9 @@ local function decorateTheme(rng: Random, n: number, parent: Instance)
 			roundTree(rng, where(), parent)
 		end
 	elseif theme == "RelojeriaAbandonada" then
+		if not floating then
+			clockTower(ringPos(sectorCenterAngle(n), ZN.ringRadius + ZN.width / 2 + 16), parent)
+		end
 		for _ = 1, count(D.gears) do
 			bigGear(rng, where(), parent)
 		end
@@ -1075,6 +1195,9 @@ local function decorateTheme(rng: Random, n: number, parent: Instance)
 			lamp(where(), parent)
 		end
 	elseif theme == "ValleTitanes" then
+		if not floating then
+			titanSword(ringPos(sectorCenterAngle(n) + 8, ZN.ringRadius + ZN.width / 2 + 14), parent)
+		end
 		for _ = 1, count(D.titanPieces) do
 			titanPiece(rng, where(), parent)
 		end
@@ -1266,6 +1389,7 @@ function WorldArt.Start()
 	end
 	buildVolcano(island)
 	buildCoastDetails(island)
+	skyClouds(island)
 end
 
 return WorldArt

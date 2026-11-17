@@ -4,6 +4,8 @@ Primer juego de Roblox del proyecto. Atrapa bichos absurdos con una red, lléval
 
 - Nuevo en el proyecto: [`docs/ONBOARDING.md`](docs/ONBOARDING.md)
 - Diseño: [`design/GDD.md`](design/GDD.md)
+- Mapa (Isla Santuario): [`design/Mapa.md`](design/Mapa.md)
+- Bichos 3D en estilo figura (y cómo importarlos en Studio): [`design/Bichos3D.md`](design/Bichos3D.md)
 - Balance: [`src/shared/Config/`](src/shared/Config/)
 - Instrucciones para Claude: [`CLAUDE.md`](CLAUDE.md)
 

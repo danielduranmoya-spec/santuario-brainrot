@@ -150,6 +150,7 @@ Art.island = {
 	petalRate = 6, -- pétalos que caen del árbol por segundo
 	groundPatches = 14, -- manchas de un segundo material en el suelo de cada zona
 	coastRocks = 70,
+	skyClouds = 14, -- grupos de nubes grandes en el cielo alrededor de la isla
 	islandClouds = 14,
 	islandDepth = 0.62, -- profundidad de la panza de roca de las islas flotantes (por su radio) -- nubes alrededor de cada isla flotante
 	floatingDecorScale = 0.45, -- las islas flotantes son más pequeñas: menos decorado
