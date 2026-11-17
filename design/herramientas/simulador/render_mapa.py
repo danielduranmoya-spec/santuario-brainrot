@@ -157,7 +157,7 @@ for p in data["parts"]:
 
 import os
 if os.environ.get("VOXELS", "1") == "1":
-    sys.path.insert(0, "/home/claude/tools/luau")
+    sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
     import voxeles
     meshes = voxeles.build(data["terrain"], TERRAIN)
     for name, (world, faces, cols) in meshes.items():
