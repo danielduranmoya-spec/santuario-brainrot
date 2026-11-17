@@ -9,20 +9,15 @@ Gameplay.GroundY = 2
 Gameplay.BaseWalkSpeed = 16 -- la mejora Botas suma a esto
 Gameplay.MaxCatchWindow = 0.9 -- tope de la zona verde con todas las mejoras
 
--- Mapa: un campo recto y largo. Al principio (Z positiva) está la plaza con los santuarios;
--- desde startZ hacia -Z vienen las bóvedas, una detrás de otra, todas del mismo ancho.
--- Cada bóveda se paga para entrar (precios en Progression.Vaults / Progression.EndlessVaults).
+-- Mapa: la Isla Santuario (trazado en Config/Island; posiciones en Shared/VaultMath y Shared/Layout).
+-- Cada zona se paga para entrar (precios en Progression.Vaults / Progression.EndlessVaults).
 Gameplay.Field = {
-	width = 160, -- ancho del campo (plaza y bóvedas), de -80 a 80 en X
-	startZ = -30, -- donde termina la plaza y empieza la bóveda 1
-	hubLength = 200, -- largo de la plaza de santuarios (de startZ a startZ + hubLength)
-	spawn = Vector3.new(0, 0, 60), -- punto de aparición (en la plaza, entre los santuarios)
-	vaultLength = 100, -- largo de cada bóveda
-	-- Menos bóvedas construidas de antemano = menos piezas (va más fluido en móvil). Antes 6 y 3.
-	initialVaults = 4, -- bóvedas construidas al arrancar el servidor
-	aheadVaults = 2, -- bóvedas construidas por delante de la más lejana que alguien haya abierto
-	crittersPerVault = 6, -- bichos salvajes a la vez en cada bóveda
-	edgeMargin = 10, -- los bichos no aparecen pegados a muros ni puertas
+	-- Las zonas 1-7 (el anillo) y la primera isla flotante se construyen al arrancar, para que la isla
+	-- esté completa y todas las puertas en su sitio. Las islas siguientes, a medida que se abren.
+	initialVaults = 8,
+	aheadVaults = 2, -- islas construidas por delante de la más lejana que alguien haya abierto
+	crittersPerVault = 6, -- bichos salvajes a la vez en cada zona
+	edgeMargin = 10, -- los bichos no aparecen pegados a los bordes
 }
 
 -- Puertas entre bóvedas (cada cliente la vuelve sólida solo para sí mismo si no la ha pagado).

@@ -16,6 +16,7 @@ local CrittersConfig = require(Config:WaitForChild("Critters"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Mutations = require(Config:WaitForChild("Mutations"))
 local Format = require(Shared:WaitForChild("Format"))
+local Layout = require(Shared:WaitForChild("Layout"))
 local MutationMath = require(Shared:WaitForChild("MutationMath"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
@@ -26,9 +27,8 @@ local Guard = require(script.Parent:WaitForChild("Guard"))
 
 type MachineDef = Mutations.MachineDef
 
-local P = Mutations.MachinePlacement
-local F = Gameplay.Field
 
+local P = Mutations.MachinePlacement
 local Fusion = {}
 
 local rng = Random.new()
@@ -195,10 +195,9 @@ local function onFuse(player: Player, machineId: unknown, critterId: unknown, pr
 end
 
 function Fusion.Start()
-	local z = F.startZ + P.fromHubEnd
+	-- A los lados de la avenida que sale de la plaza hacia la zona 1 (Shared/Layout).
 	for index, machine in Mutations.Machines do
-		local side = if index % 2 == 1 then -1 else 1
-		buildMachine(machine, Vector3.new(side * P.offsetX, Gameplay.GroundY, z))
+		buildMachine(machine, Layout.machine(index))
 	end
 	Guard.Connect(Remotes.Fuse, "Fuse", onFuse)
 	game:GetService("Players").PlayerRemoving:Connect(function(player)

@@ -13,6 +13,7 @@ local Config = Shared:WaitForChild("Config")
 local Events = require(Config:WaitForChild("Events"))
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local MutationMath = require(Shared:WaitForChild("MutationMath"))
+local Layout = require(Shared:WaitForChild("Layout"))
 
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local Guard = require(script.Parent:WaitForChild("Guard"))
@@ -112,10 +113,9 @@ local function buildKeeper(def: StandDef, base: CFrame, parent: Instance): BaseP
 	return torso
 end
 
-local function buildStand(def: StandDef, folder: Instance)
-	local position = Vector3.new(def.position.X, G, def.position.Y)
-	-- El frente del stand (-Z local) mira a la avenida (x = 0).
-	local origin = CFrame.lookAt(position, Vector3.new(0, G, def.position.Y))
+local function buildStand(def: StandDef, index: number, folder: Instance)
+	-- El frente del stand (-Z local) mira al árbol de la plaza (Shared/Layout).
+	local origin = Layout.stand(index)
 	local model = Instance.new("Model")
 	model.Name = "Stand" .. def.id
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
@@ -201,8 +201,8 @@ function EventStands.Start()
 	local folder = Instance.new("Folder")
 	folder.Name = "StandsEventos"
 	folder.Parent = Workspace
-	for _, def in Events.Stands do
-		buildStand(def, folder)
+	for index, def in Events.Stands do
+		buildStand(def, index, folder)
 	end
 	task.spawn(function()
 		while true do

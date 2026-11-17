@@ -15,6 +15,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Format = require(Shared:WaitForChild("Format"))
+local Layout = require(Shared:WaitForChild("Layout"))
 
 local Data = require(script.Parent:WaitForChild("Data"))
 
@@ -77,13 +78,13 @@ end
 
 -- Cartel: marco de madera dorada, tablero oscuro con SurfaceGui y patas.
 local function buildBoard(def: BoardDef, index: number, folder: Folder): Board
-	local x = (index - (#L.Boards + 1) / 2) * L.spacingX
+	local base = Layout.leaderboard(index, #L.Boards) -- en fila frente a la plaza, al otro lado de la avenida
 	local size = L.size
 	local model = Instance.new("Model")
 	model.Name = "Ranking" .. def.id
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-	-- La cara delantera (-Z del cartel) mira hacia la plaza (Z menores).
-	local center = CFrame.new(x, G + 2 + size.Y / 2, L.z)
+	-- La cara delantera (-Z del cartel) mira hacia la plaza.
+	local center = base * CFrame.new(0, 2 + size.Y / 2, 0)
 
 	local panel = Instance.new("Part")
 	panel.Name = "Tablero"
@@ -108,7 +109,7 @@ local function buildBoard(def: BoardDef, index: number, folder: Folder): Board
 		local post = Instance.new("Part")
 		post.Name = "Pata"
 		post.Size = Vector3.new(0.8, size.Y + 3.6, size.Z + 0.4)
-		post.CFrame = CFrame.new(x + side * (size.X / 2 + 0.4), G + (size.Y + 3.6) / 2, L.z)
+		post.CFrame = base * CFrame.new(side * (size.X / 2 + 0.4), (size.Y + 3.6) / 2, 0)
 		post.Color = frameColor
 		post.Material = Enum.Material.Wood
 		post.Anchored = true

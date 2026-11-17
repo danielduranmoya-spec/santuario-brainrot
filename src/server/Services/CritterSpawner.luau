@@ -164,21 +164,17 @@ local function firstCommon(): CritterDef?
 	return nil
 end
 
+-- Punto al azar dentro de la zona (cada zona es un rectángulo girado, ver Shared/VaultMath).
 local function randomSpawnPoint(vault: number): Vector3
 	local margin = F.edgeMargin
-	local x = rng:NextNumber(-F.width / 2 + margin, F.width / 2 - margin)
-	local z = rng:NextNumber(VaultMath.backZ(vault) + margin, VaultMath.frontZ(vault) - margin)
-	return Vector3.new(x, Gameplay.GroundY, z)
+	local size = VaultMath.size(vault)
+	local mu, mv = margin / size.X, margin / size.Y
+	return VaultMath.point(vault, rng:NextNumber(-0.5 + mu, 0.5 - mu), rng:NextNumber(-0.5 + mv, 0.5 - mv))
 end
 
 -- Mantiene un punto dentro de su bóveda.
 local function clampToVault(vault: number, point: Vector3): Vector3
-	local margin = F.edgeMargin
-	return Vector3.new(
-		math.clamp(point.X, -F.width / 2 + margin, F.width / 2 - margin),
-		point.Y,
-		math.clamp(point.Z, VaultMath.backZ(vault) + margin, VaultMath.frontZ(vault) - margin)
-	)
+	return VaultMath.clamp(vault, point, F.edgeMargin)
 end
 
 -- Altura real del suelo (Terrain) en un punto: el terreno no es perfectamente plano.
@@ -187,9 +183,11 @@ groundParams.FilterType = Enum.RaycastFilterType.Include
 groundParams.FilterDescendantsInstances = { Workspace.Terrain }
 groundParams.IgnoreWater = true
 
-local function groundYAt(x: number, z: number): number
-	local hit = Workspace:Raycast(Vector3.new(x, Gameplay.GroundY + 60, z), Vector3.new(0, -120, 0), groundParams)
-	return if hit then hit.Position.Y else Gameplay.GroundY
+-- `nearY`: altura aproximada del suelo de esa zona (las islas flotantes están más altas).
+local function groundYAt(x: number, z: number, nearY: number?): number
+	local base = nearY or Gameplay.GroundY
+	local hit = Workspace:Raycast(Vector3.new(x, base + 40, z), Vector3.new(0, -80, 0), groundParams)
+	return if hit then hit.Position.Y else base
 end
 
 local function refreshPrompt(w: Wild)
@@ -208,7 +206,7 @@ local function moveTo(w: Wild, target: Vector3, speed: number)
 		w.tween = nil
 	end
 	local from = w.part.Position
-	local goal = Vector3.new(target.X, groundYAt(target.X, target.Z) + w.part.Size.Y / 2 + Gameplay.CritterLift, target.Z)
+	local goal = Vector3.new(target.X, groundYAt(target.X, target.Z, w.part.Position.Y - w.part.Size.Y / 2) + w.part.Size.Y / 2 + Gameplay.CritterLift, target.Z)
 	local distance = (goal - from).Magnitude
 	if distance < 0.1 then
 		return
@@ -247,7 +245,7 @@ local function spawnWild(def: CritterDef, vault: number, groundPosition: Vector3
 	local part = CritterVisual.create(def, colorId, sizeId)
 	local uid = HttpService:GenerateGUID(false)
 	local mult = multiplier or VaultMath.valueMultiplier(vault)
-	local groundY = groundYAt(groundPosition.X, groundPosition.Z)
+	local groundY = groundYAt(groundPosition.X, groundPosition.Z, groundPosition.Y)
 	part.CFrame = CFrame.new(groundPosition.X, groundY + part.Size.Y / 2 + Gameplay.CritterLift, groundPosition.Z)
 		* CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 	part:SetAttribute("CritterUid", uid)
@@ -527,7 +525,7 @@ local function onReleaseCarried(player: Player)
 			drop = front
 		end
 	end
-	spawnWild(carried.def, vault, Vector3.new(drop.X, Gameplay.GroundY, drop.Z), nil, false, carried.multiplier, carried.color, carried.size)
+	spawnWild(carried.def, vault, Vector3.new(drop.X, VaultMath.floorY(vault), drop.Z), nil, false, carried.multiplier, carried.color, carried.size)
 	notify(player, "Has soltado a " .. MutationMath.displayName(carried.def.name, carried.color, carried.size) .. ".")
 end
 
@@ -742,7 +740,7 @@ function CritterSpawner.Start()
 				if def.id == critterId and root then
 					local front = (root.CFrame * CFrame.new(0, 0, -8)).Position
 					local vault = VaultMath.vaultAt(front) or 1
-					spawnWild(def, vault, Vector3.new(front.X, Gameplay.GroundY, front.Z), player, false, nil, color, size)
+					spawnWild(def, vault, Vector3.new(front.X, VaultMath.floorY(vault), front.Z), player, false, nil, color, size)
 					return true
 				end
 			end

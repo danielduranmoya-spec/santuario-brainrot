@@ -1,6 +1,7 @@
 --!strict
--- Campo de bóvedas sin fin. Cada bóveda es un tramo del campo con su temática; entre una y otra
--- hay un muro-puerta con un panel "Abrir bóveda": se paga una vez y queda abierta para siempre.
+-- Zonas (bóvedas) de la isla, sin fin. Las 1-7 son sectores alrededor de la plaza separados por
+-- crestas de roca; de la 8 en adelante, islas flotantes unidas por puentes (Shared/VaultMath). En
+-- cada paso hay un arco con un panel "Abrir": se paga una vez y queda abierto para siempre.
 --   * El servidor deja el muro atravesable; cada cliente lo vuelve sólido solo para sí mismo si aún
 --     no la ha pagado (client/VaultDoors). Además, el servidor no deja atrapar bichos de bóvedas
 --     cerradas (CritterSpawner), así que saltarse el muro no sirve de nada.
@@ -15,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = Shared:WaitForChild("Config")
 local Gameplay = require(Config:WaitForChild("Gameplay"))
 local Art = require(Config:WaitForChild("Art"))
+local Island = require(Config:WaitForChild("Island"))
 local Format = require(Shared:WaitForChild("Format"))
 local VaultMath = require(Shared:WaitForChild("VaultMath"))
 
@@ -22,7 +24,6 @@ local Data = require(script.Parent:WaitForChild("Data"))
 local Economy = require(script.Parent:WaitForChild("Economy"))
 local Remotes = require(script.Parent:WaitForChild("Remotes"))
 local WorldArt = require(script.Parent:WaitForChild("WorldArt"))
-local Boundary = require(script.Parent:WaitForChild("Boundary"))
 local Analytics = require(script.Parent:WaitForChild("Analytics"))
 
 local F = Gameplay.Field
@@ -126,8 +127,10 @@ end
 local function buildDoor(n: number)
 	local theme = VaultMath.theme(n)
 	local color = Art.themeColors[theme]
-	local z = VaultMath.frontZ(n)
-	local ground = Gameplay.GroundY
+	-- Arco en el camino (Shared/VaultMath.gate): su -Z local apunta hacia dentro de la zona.
+	local gate = VaultMath.gate(n)
+	local width = Island.Zones.gateWidth
+	local height = Island.Zones.gateHeight
 
 	local model = Instance.new("Model")
 	model.Name = "Boveda" .. n
@@ -135,24 +138,28 @@ local function buildDoor(n: number)
 	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 
 	-- Columnas a los lados y dintel con el nombre (se quedan aunque la puerta se abra).
+	local stone = Color3.fromRGB(196, 186, 170)
 	for _, side in { -1, 1 } do
-		newPart("Columna", Vector3.new(6, D.height + 4, 6), CFrame.new(side * (F.width / 2 - 3), ground + (D.height + 4) / 2, z), Color3.fromRGB(150, 140, 130), Enum.Material.Slate, model)
-		newPart("Remate", Vector3.new(8, 2, 8), CFrame.new(side * (F.width / 2 - 3), ground + D.height + 5, z), color, Enum.Material.SmoothPlastic, model)
+		local x = side * (width / 2 + 3)
+		newPart("Columna", Vector3.new(6, height + 4, 6), gate * CFrame.new(x, (height + 4) / 2, 0), stone, Enum.Material.Cobblestone, model)
+		newPart("Base", Vector3.new(8, 2, 8), gate * CFrame.new(x, 1, 0), stone, Enum.Material.Slate, model)
+		newPart("Remate", Vector3.new(8, 2, 8), gate * CFrame.new(x, height + 5, 0), color, Enum.Material.SmoothPlastic, model)
+		local orb = newPart("Orbe", Vector3.new(3, 3, 3), gate * CFrame.new(x, height + 7.5, 0), color, Enum.Material.Neon, model)
+		orb.Shape = Enum.PartType.Ball
+		orb.CanCollide = false
 	end
-	local lintel = newPart("Dintel", Vector3.new(F.width, 4, 4), CFrame.new(0, ground + D.height + 2, z), color, Enum.Material.SmoothPlastic, model)
-	local title = "BÓVEDA " .. n .. " · " .. string.upper(VaultMath.name(n))
-	newSurfaceText(lintel, Enum.NormalId.Back, title, Color3.new(1, 1, 1)) -- cara que mira a la plaza (+Z)
+	local lintel = newPart("Dintel", Vector3.new(width + 12, 4, 4), gate * CFrame.new(0, height + 2, 0), color, Enum.Material.SmoothPlastic, model)
+	local title = "ZONA " .. n .. " · " .. string.upper(VaultMath.name(n))
+	newSurfaceText(lintel, Enum.NormalId.Back, title, Color3.new(1, 1, 1)) -- cara que mira al camino de llegada
 	newSurfaceText(lintel, Enum.NormalId.Front, title, Color3.new(1, 1, 1))
-
 	if n >= 2 then
-		local door = newPart("Puerta", Vector3.new(F.width - 12, D.height, D.thickness), CFrame.new(0, ground + D.height / 2, z), color, Enum.Material.ForceField, model)
+		local door = newPart("Puerta", Vector3.new(width, height, D.thickness), gate * CFrame.new(0, height / 2, 0), color, Enum.Material.ForceField, model)
 		door.Transparency = D.transparency
 		door.CanCollide = false -- el cliente la vuelve sólida si no la tienes
 		door.CanQuery = false
-
 		local cost = VaultMath.cost(n)
 		local multiplier = VaultMath.valueMultiplier(n)
-		local panel = newPart("Panel", Vector3.new(14, 7, 1), CFrame.new(0, ground + 5.5, z + 1.6), Color3.fromRGB(40, 35, 50), Enum.Material.SmoothPlastic, model)
+		local panel = newPart("Panel", Vector3.new(14, 7, 1), gate * CFrame.new(0, 5.5, 2.2), Color3.fromRGB(40, 35, 50), Enum.Material.SmoothPlastic, model)
 		panel.CanCollide = false
 		newSurfaceText(
 			panel,
@@ -161,11 +168,10 @@ local function buildDoor(n: number)
 			Art.colors.gold
 		)
 		panels[n] = panel
-
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "Abrir"
 		prompt.ActionText = "Abrir (" .. Format.number(cost) .. " 💰)"
-		prompt.ObjectText = "Bóveda " .. n
+		prompt.ObjectText = "Zona " .. n
 		prompt.HoldDuration = D.promptHoldSeconds
 		prompt.MaxActivationDistance = D.promptDistance
 		prompt.RequiresLineOfSight = false
@@ -188,7 +194,6 @@ function Vaults.EnsureGenerated(count: number)
 		buildDoor(n)
 	end
 	generated = count
-	Boundary.SetFieldEnd(VaultMath.backZ(generated))
 	Workspace:SetAttribute("VaultsGenerated", generated)
 end
 

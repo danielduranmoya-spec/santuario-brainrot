@@ -164,8 +164,7 @@ Mutations.Machines = {
 } :: { MachineDef }
 
 Mutations.MachinePlacement = {
-	offsetX = 18, -- una a cada lado de la avenida central
-	fromHubEnd = 14, -- studs antes del final de la plaza (donde empiezan las bóvedas)
+	-- Dónde van: a los lados de la avenida (Config/Island.Machines y Shared/Layout).
 	promptDistance = 12,
 	requestCooldownSeconds = 0.5,
 }

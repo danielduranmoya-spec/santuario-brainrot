@@ -62,7 +62,6 @@ Events.Stands = {
 		kind = "legendario",
 		title = "LOBO DE TORMENTA",
 		keeper = "Tormentina",
-		position = Vector2.new(-21, 29),
 		color = Color3.fromRGB(70, 110, 220),
 		accent = Color3.fromRGB(255, 205, 60),
 		talk = "⛈ Soy Tormentina. Cada 8 minutos el Lobo de Tormenta baja a la Playa Rara. ¡El primero que lo atrape se lo queda! Mira mi cartel para saber cuándo.",
@@ -72,7 +71,6 @@ Events.Stands = {
 		kind = "lluvia",
 		title = "LLUVIA DE BICHOS",
 		keeper = "Don Chubasco",
-		position = Vector2.new(21, 29),
 		color = Color3.fromRGB(60, 170, 200),
 		accent = Color3.fromRGB(190, 240, 255),
 		talk = "🌧 Soy Don Chubasco. Los sábados a las 18:00 llueven bichos: salen el triple durante 30 minutos y a veces el Ajolote Chubasquero, que solo aparece ese día.",
@@ -82,12 +80,11 @@ Events.Stands = {
 		kind = "mutacion",
 		title = "MUTACIONES",
 		keeper = "Alquimista Mutia",
-		position = Vector2.new(-21, 87),
 		color = Color3.fromRGB(150, 70, 220),
 		accent = Color3.fromRGB(120, 255, 200),
 		talk = "⚗ Soy Mutia. Cada 20 minutos llega un evento de mutación y salen más bichos de Oro, Diamante, Neón... ¡Y en la TIENDA puedes invocar uno para todo el servidor!",
 	},
-} :: { { id: string, kind: string, title: string, keeper: string, position: Vector2, color: Color3, accent: Color3, talk: string } }
+} :: { { id: string, kind: string, title: string, keeper: string, color: Color3, accent: Color3, talk: string } }
 Events.standPromptDistance = 10
 
 return Events

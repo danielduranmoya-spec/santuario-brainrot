@@ -112,13 +112,14 @@ Art.terrain = {
 
 -- Límite infranqueable: muros invisibles alrededor del campo (y techo).
 Art.boundary = {
-	height = 400,
+	height = 400, -- muros de la plaza y de las crestas entre zonas
+	coastHeight = 22, -- muro de la costa: bajo, para que los puentes a las islas flotantes pasen por encima
 	thickness = 6,
-	segmentLength = 500, -- largo de cada tramo de muro lateral
-	ceilingHeight = 120, -- techo invisible sobre el suelo
-	-- Si un jugador cae por debajo del suelo o sale del campo, vuelve a su santuario.
+	-- Si un jugador cae por debajo del suelo, al mar o muy lejos, vuelve a su santuario.
 	respawnBelowY = -10,
 	respawnMargin = 6,
+	seaRescueAbove = 6, -- pasada la costa, por debajo de esta altura sobre el suelo (en el agua)
+	maxRadius = 1100,
 	checkSeconds = 0.5,
 }
 
@@ -136,31 +137,37 @@ Art.themeColors = {
 }
 
 -- Plaza de los santuarios.
-Art.hub = {
-	avenueWidth = 18,
-	trees = 10,
-	flowers = 24,
-}
-
--- Decorado por bóveda (por temática). Pocas piezas: van muchas bóvedas seguidas.
-Art.vaultDecor = {
-	palms = 5,
-	umbrellas = 1,
-	trees = 7,
-	bushes = 3,
-	mushrooms = 2,
-	lavaRocks = 5,
-	clouds = 4,
-	crystals = 3,
-	rocks = 4,
-	ponds = 4, -- Pantano de Cristal
-	reeds = 6,
-	gears = 5, -- Relojería Abandonada
-	pendulums = 2,
-	titanPieces = 3, -- Valle de los Titanes
-	pillars = 5,
-	starOrbs = 8, -- Observatorio Astral
-	obelisks = 6, -- Santuario del Eclipse
+-- Decorado de la Isla Santuario (server/Services/WorldArt, trazado en Config/Island). Las cantidades
+-- son por zona; bájalas si va lento en móvil (ver design/Rendimiento.md).
+Art.island = {
+	pathWidth = 12, -- camino en anillo que une las zonas
+	pathClearance = 12, -- el decorado no se pone a menos de esto del camino
+	switchbackWidth = 12, -- zigzag de las escaleras de la isla de nubes
+	treeLanterns = 28, -- farolillos del árbol gigante
+	petalRate = 6, -- pétalos que caen del árbol por segundo
+	groundPatches = 14, -- manchas de un segundo material en el suelo de cada zona
+	coastRocks = 70,
+	islandClouds = 14,
+	islandDepth = 0.62, -- profundidad de la panza de roca de las islas flotantes (por su radio) -- nubes alrededor de cada isla flotante
+	floatingDecorScale = 0.45, -- las islas flotantes son más pequeñas: menos decorado
+	beachPalms = 34,
+	beachUmbrellas = 6,
+	beachRocks = 12,
+	forestTrees = 60,
+	forestBushes = 30,
+	forestMushrooms = 12,
+	flowers = 30,
+	volcanoRocks = 26,
+	lavaPools = 7,
+	cloudTrees = 14,
+	swampPools = 12,
+	swampCrystals = 18,
+	gears = 11,
+	clocks = 8,
+	pillars = 12,
+	titanPieces = 9,
+	starOrbs = 8,
+	obelisks = 7,
 }
 
 -- Eventos de mutación: cuánto se tiñe la pantalla con el color del evento (0-1) y las partículas

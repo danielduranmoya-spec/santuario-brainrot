@@ -23,6 +23,7 @@ local Progression = require(Config:WaitForChild("Progression"))
 local Shop = require(Config:WaitForChild("Shop"))
 local Art = require(Config:WaitForChild("Art"))
 local Format = require(Shared:WaitForChild("Format"))
+local Layout = require(Shared:WaitForChild("Layout"))
 local UpgradeMath = require(Shared:WaitForChild("UpgradeMath"))
 local MutationMath = require(Shared:WaitForChild("MutationMath"))
 
@@ -159,11 +160,9 @@ local function setOwnerText(plot: Plot, text: string)
 end
 
 local function buildPlot(index: number): Plot
-	local side = if index % 2 == 1 then -1 else 1
-	local row = (index - 1) // 2
-	local z = S.firstZ + row * S.spacingZ
-	local position = Vector3.new(side * S.sideX, G, z)
-	local origin = CFrame.lookAt(position, Vector3.new(0, G, z))
+	-- En círculo alrededor del árbol, con la entrada (-Z local) hacia la plaza (Shared/Layout).
+	local origin = Layout.plot(index)
+	local position = origin.Position
 	local half = S.plotSize / 2
 
 	local model = Instance.new("Model")
@@ -632,7 +631,7 @@ local function ensureSpawnLocation()
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Anchored = true
 	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.Position = Gameplay.Field.spawn + Vector3.new(0, G + 0.5, 0)
+	spawn.Position = Layout.spawn() + Vector3.new(0, G + 0.5, 0)
 	spawn.Parent = Workspace
 end
 
