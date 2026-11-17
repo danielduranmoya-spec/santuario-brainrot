@@ -52,6 +52,9 @@ Art.ambienceTweenSeconds = 2
 -- pequeños (cada bicho tiene entonces en torno a un tercio menos de piezas). Bájalo a 1 si el juego
 -- va lento en móviles modestos.
 Art.critterDetail = 2
+-- Modelos 3D en estilo figura (Config/CritterMeshes, design/Bichos3D.md). Si al importarlos en Studio
+-- los bichos salen mirando hacia atrás, poner 180.
+Art.critterMeshYawFix = 0
 
 -- Animaciones de los bichos (client/CritterAnimator).
 -- Fotogramas por segundo y distancia de animación: Art.performance.

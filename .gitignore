@@ -6,3 +6,6 @@ sourcemap.json
 .DS_Store
 Thumbs.db
 .obsidian/workspace*.json
+
+# Salida de las herramientas de modelado (se regenera)
+design/herramientas/figuras/out/

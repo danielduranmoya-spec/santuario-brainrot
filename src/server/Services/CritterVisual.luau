@@ -14,6 +14,9 @@ local MutationMath = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChi
 
 -- Está en Shared para que el cliente también pueda dibujar los modelos (índice de bichos).
 local CritterArt = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CritterArt"))
+-- Modelos 3D en estilo figura (design/Bichos3D.md): si están importados en Studio, se usan; si no,
+-- el bicho se dibuja con las piezas de CritterArt como siempre.
+local CritterMeshes = require(Config:WaitForChild("CritterMeshes"))
 
 type CritterDef = CrittersConfig.Critter
 
@@ -114,6 +117,89 @@ local function detailPart(root: BasePart, spec: CritterArt.PartSpec, scale: numb
 	return part
 end
 
+-- Carpeta con los modelos importados (ReplicatedStorage.Assets.Bichos). Puede no existir.
+local function meshModel(id: string): Instance?
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local folder = assets and assets:FindFirstChild("Bichos")
+	-- Búsqueda en profundidad: el importador de Studio a veces mete los modelos en una carpeta más.
+	return folder and folder:FindFirstChild(id, true)
+end
+
+-- Al importar, la malla puede quedar girada 90° respecto a como se exportó. Se elige el giro que
+-- mejor hace coincidir su tamaño original (MeshSize) con el tamaño esperado de la pieza.
+local TURNS = {
+	CFrame.new(),
+	CFrame.Angles(math.rad(90), 0, 0),
+	CFrame.Angles(0, math.rad(90), 0),
+	CFrame.Angles(0, 0, math.rad(90)),
+}
+local function importTurn(meshSize: Vector3, expected: Vector3): CFrame
+	local best, bestError = TURNS[1], math.huge
+	local m = meshSize / math.max(meshSize.X, meshSize.Y, meshSize.Z, 1e-6)
+	local e = expected / math.max(expected.X, expected.Y, expected.Z, 1e-6)
+	for _, turn in TURNS do
+		local r = turn:VectorToObjectSpace(e)
+		local diff = Vector3.new(math.abs(r.X), math.abs(r.Y), math.abs(r.Z)) - m
+		local err = diff.Magnitude
+		if err < bestError - 0.05 then
+			best, bestError = turn, err
+		end
+	end
+	return best
+end
+
+-- Modelo 3D de un bicho soldado a la raíz. Devuelve false si falta alguna pieza (se usa CritterArt).
+local function attachMeshes(root: BasePart, id: string, size: number, look: MutationMath.ColorDef): boolean
+	local pieces = CritterMeshes[id]
+	local source = meshModel(id)
+	if not pieces or not source then
+		return false
+	end
+	local found: { [string]: MeshPart } = {}
+	for _, piece in pieces do
+		local mesh = source:FindFirstChild(piece.name, true)
+		if not mesh or not mesh:IsA("MeshPart") then
+			return false
+		end
+		found[piece.name] = mesh
+	end
+	local yaw = CFrame.Angles(0, math.rad(Art.critterMeshYawFix), 0)
+	for _, piece in pieces do
+		if piece.fine and Art.critterDetail < 2 then
+			continue
+		end
+		local part = found[piece.name]:Clone()
+		part.Name = piece.anim -- el papel que entiende client/CritterAnimator
+		part.Size = importTurn(part.MeshSize, piece.size):VectorToObjectSpace(piece.size * size)
+		part.Size = Vector3.new(math.abs(part.Size.X), math.abs(part.Size.Y), math.abs(part.Size.Z))
+		part.Color = piece.color
+		part.Material = piece.material
+		part.Transparency = if piece.anim == "Parpado" then 1 else 0
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Massless = true
+		part.Anchored = false
+		local offset = CFrame.new(piece.pos * size) * yaw * importTurn(part.MeshSize, piece.size)
+		if piece.pivot then
+			part:SetAttribute("Pivot", piece.pivot * size)
+		end
+		if piece.fine then
+			part:SetAttribute("Fine", true)
+		end
+		part.CFrame = root.CFrame * offset
+		local weld = Instance.new("Weld")
+		weld.Part0 = root
+		weld.Part1 = part
+		weld.C0 = offset
+		weld.Parent = part
+		part.Parent = root
+		applyColor(part, { color = piece.color, keep = piece.keep, name = piece.anim } :: any, look)
+	end
+	return true
+end
+
 -- `color` y `size` son las mutaciones (nil = Normal). En el santuario (`inSanctuary`) los bichos
 -- grandes se dibujan algo más pequeños para no pisar los pedestales vecinos.
 function CritterVisual.create(def: CritterDef, color: string?, sizeId: string?, inSanctuary: boolean?): Part
@@ -146,7 +232,9 @@ function CritterVisual.create(def: CritterDef, color: string?, sizeId: string?, 
 	end
 
 	local specs = CritterArt[def.id]
-	if specs then
+	if attachMeshes(root, def.id, size, look) then
+		root:SetAttribute("Figura", true)
+	elseif specs then
 		for _, spec in specs do
 			-- Los adornos pequeños se pueden quitar para aligerar (Config/Art.critterDetail).
 			if not spec.fine or Art.critterDetail >= 2 then
