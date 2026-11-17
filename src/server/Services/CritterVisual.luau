@@ -148,6 +148,33 @@ local function importTurn(meshSize: Vector3, expected: Vector3): CFrame
 	return best
 end
 
+-- Piezas con textura importada: la textura manda. Las mutaciones de color tiñen la textura
+-- (SurfaceAppearance.Color, si el importador la creó) y cambian material y brillo como siempre.
+local function tintTexture(part: MeshPart, piece: CritterMeshes.MeshPiece, look: MutationMath.ColorDef)
+	local tint = look.tint
+	if not tint or piece.keep then
+		return
+	end
+	local color = tint:Lerp(Color3.new(1, 1, 1), look.blend or 0)
+	local appearance = part:FindFirstChildOfClass("SurfaceAppearance")
+	if appearance then
+		pcall(function()
+			(appearance :: any).Color = color
+		end)
+	else
+		part.Color = color -- sin SurfaceAppearance (textura en TextureID): al menos el material cambia
+	end
+	if look.material then
+		part.Material = look.material
+	end
+	if look.reflectance then
+		part.Reflectance = look.reflectance
+	end
+	if look.rainbow then
+		part:SetAttribute("RainbowOffset", piece.color:ToHSV())
+	end
+end
+
 -- Modelo 3D de un bicho soldado a la raíz. Devuelve false si falta alguna pieza (se usa CritterArt).
 local function attachMeshes(root: BasePart, id: string, size: number, look: MutationMath.ColorDef): boolean
 	local pieces = CritterMeshes[id]
@@ -172,8 +199,10 @@ local function attachMeshes(root: BasePart, id: string, size: number, look: Muta
 		part.Name = piece.anim -- el papel que entiende client/CritterAnimator
 		part.Size = importTurn(part.MeshSize, piece.size):VectorToObjectSpace(piece.size * size)
 		part.Size = Vector3.new(math.abs(part.Size.X), math.abs(part.Size.Y), math.abs(part.Size.Z))
-		part.Color = piece.color
-		part.Material = piece.material
+		if not piece.textured then
+			part.Color = piece.color
+			part.Material = piece.material
+		end
 		part.Transparency = if piece.anim == "Parpado" then 1 else 0
 		part.CanCollide = false
 		part.CanQuery = false
@@ -195,7 +224,11 @@ local function attachMeshes(root: BasePart, id: string, size: number, look: Muta
 		weld.C0 = offset
 		weld.Parent = part
 		part.Parent = root
-		applyColor(part, { color = piece.color, keep = piece.keep, name = piece.anim } :: any, look)
+		if piece.textured then
+			tintTexture(part, piece, look)
+		else
+			applyColor(part, { color = piece.color, keep = piece.keep, name = piece.anim } :: any, look)
+		end
 	end
 	return true
 end
